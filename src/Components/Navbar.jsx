@@ -64,9 +64,9 @@ const Navbar = ({ darkMode, toggleMode }) => {
         </Link>
       </div>
       <div style={{ display: "flex", gap: "20px", alignItems: "center" }}>
-        {["/home", "/products", "/cart", "/checkout", "/orders", "/profile"].map((path, index) => {
+        {["/home", "/products", "/cart", "/checkout", "/orders","/profile"].map((path, index) => {
           // Hide some links if not authenticated
-          if (!isAuth && ["/cart", "/checkout", "/orders", "/profile"].includes(path)) return null;
+          if (!isAuth && ["/cart", "/checkout","/orders", "/profile"].includes(path)) return null;
 
           const text =
             path === "/home"
@@ -77,8 +77,6 @@ const Navbar = ({ darkMode, toggleMode }) => {
               ? `Cart ${isAuth ? `(${cartCount})` : ""}`
               : path === "/checkout"
               ? "Checkout"
-              : path === "/orders"
-              ? "Orders"
               : "Profile"; // handles /profile
 
           return (

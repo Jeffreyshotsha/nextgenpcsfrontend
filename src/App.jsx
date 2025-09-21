@@ -6,6 +6,7 @@ import Home from './Components/Home';
 import Product from './Components/Product';
 import Cart from './Components/Cart';
 import Checkout from './Components/Checkout';
+import Order from './Components/Order';
 import Profile from './Components/Profile';
 import Navbar from './Components/Navbar';
 import { useState } from 'react';
@@ -59,7 +60,7 @@ function App() {
             <Route path="/cart" element={<Cart darkMode={darkMode} />} />
             <Route path="/checkout" element={<Checkout darkMode={darkMode} />} />
             <Route path="/profile" element={<Profile darkMode={darkMode} />} />
-  
+            <Route path="/orders/:orderId" element={<Order darkMode={darkMode} />} />
           </Routes>
         </Layout>
       </BrowserRouter>
