@@ -2,50 +2,37 @@ import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { AuthContext } from './AuthContext';
+import { useApiIp } from '../App';
 
 const Login = () => {
-  const { login } = useContext(AuthContext); // Access login from AuthContext
+  const { login } = useContext(AuthContext);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [alert, setAlert] = useState(null); 
+  const [alert, setAlert] = useState(null);
   const navigate = useNavigate();
+  const { getApiUrl } = useApiIp();
 
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post('http://localhost:3000/login', { email, password });
+      const response = await axios.post(`${getApiUrl()}/login`, { email, password });
 
       if (response.data.user) {
-        const user = response.data.user; // Assuming backend returns { user: { username, email, phone } }
+        const user = response.data.user;
 
-        // Save user globally in context
-        login({
-          email: user.email,
-          username: user.username,
-          phone: user.phone,
-        });
-
-        // Optional: store auth info in localStorage for backend auth
+        login({ email: user.email, username: user.username, phone: user.phone });
         localStorage.setItem('Auth', btoa(`${email}:${password}`));
 
-        // Show welcome alert
         setAlert({ type: 'info', message: `Welcome back, ${user.username || email}!` });
-
-        // Redirect after a short delay so user sees the alert
         setTimeout(() => navigate('/home'), 1500);
       }
     } catch (err) {
       console.error(err);
-      if (err.response && err.response.status === 401) {
-        setError('Invalid credentials. Please try again.');
-      } else {
-        setError('Login failed. Check your connection or try again.');
-      }
+      setError(err.response?.status === 401 ? 'Invalid credentials.' : 'Login failed.');
     }
   };
 
-  // Auto-dismiss alert after 3 seconds
   useEffect(() => {
     if (alert) {
       const timer = setTimeout(() => setAlert(null), 3000);
@@ -58,48 +45,15 @@ const Login = () => {
       <h2 style={styles.title}>Login</h2>
       {error && <p style={styles.error}>{error}</p>}
       <form onSubmit={handleLogin} style={styles.form}>
-        <input
-          style={styles.input}
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-        <input
-          style={styles.input}
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
+        <input style={styles.input} type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        <input style={styles.input} type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
         <button style={styles.button} type="submit">Login</button>
       </form>
       <p style={styles.linkText}>
         Don’t have an account? <Link to="/" style={styles.link}>Sign Up</Link>
       </p>
 
-      {/* Styled Alert */}
-      {alert && (
-        <div
-          style={{
-            position: 'fixed',
-            top: '20px',
-            right: '20px',
-            backgroundColor: alert.type === 'info' ? '#2196f3' : '#4caf50',
-            color: '#fff',
-            padding: '15px 25px',
-            borderRadius: '8px',
-            fontWeight: 'bold',
-            boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
-            zIndex: 1000,
-            transition: 'all 0.3s ease',
-          }}
-        >
-          {alert.message}
-        </div>
-      )}
+      {alert && <div style={alertStyles(alert)}>{alert.message}</div>}
     </div>
   );
 };
@@ -114,5 +68,19 @@ const styles = {
   linkText: { textAlign: 'center', marginTop: '15px', fontSize: '14px', color: '#000' },
   link: { color: '#000', textDecoration: 'underline', fontWeight: 'bold' },
 };
+
+const alertStyles = (alert) => ({
+  position: 'fixed',
+  top: '20px',
+  right: '20px',
+  backgroundColor: alert.type === 'info' ? '#2196f3' : '#4caf50',
+  color: '#fff',
+  padding: '15px 25px',
+  borderRadius: '8px',
+  fontWeight: 'bold',
+  boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+  zIndex: 1000,
+  transition: 'all 0.3s ease',
+});
 
 export default Login;

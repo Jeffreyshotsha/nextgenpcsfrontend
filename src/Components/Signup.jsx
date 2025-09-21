@@ -3,8 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { AuthContext } from './AuthContext';
 
-const Signup = () => {
-  const { login } = useContext(AuthContext); // Access login function from context
+const Signup = ({ getApiUrl }) => {
+  const { login } = useContext(AuthContext);
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -16,7 +16,7 @@ const Signup = () => {
   const handleSignup = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post('http://localhost:3000/signup', {
+      const response = await axios.post(`${getApiUrl()}/signup`, {
         email,
         username,
         password,
@@ -24,20 +24,15 @@ const Signup = () => {
       });
 
       if (response.data.email) {
-        // Save user globally in AuthContext
         login({
           email: response.data.email,
           username: response.data.username,
           phone: response.data.phone,
         });
 
-        // Optional: store auth info in localStorage (for backend auth)
         localStorage.setItem('Auth', btoa(`${email}:${password}`));
 
-        // Show welcome alert
         setAlert({ type: 'success', message: `Welcome ${username} to NextGenPcs.com!` });
-
-        // Redirect after short delay
         setTimeout(() => navigate('/home'), 1500);
       }
     } catch (err) {
@@ -46,10 +41,9 @@ const Signup = () => {
     }
   };
 
-  // Auto-dismiss alert after 3 seconds
   useEffect(() => {
     if (alert) {
-      const timer = setTimeout(() => setAlert(null), 12000);
+      const timer = setTimeout(() => setAlert(null), 3000);
       return () => clearTimeout(timer);
     }
   }, [alert]);
@@ -59,61 +53,30 @@ const Signup = () => {
       <h2 style={styles.title}>Sign Up</h2>
       {error && <p style={styles.error}>{error}</p>}
       <form onSubmit={handleSignup} style={styles.form}>
-        <input
-          style={styles.input}
-          type="text"
-          placeholder="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          required
-        />
-        <input
-          style={styles.input}
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-        <input
-          style={styles.input}
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
-        <input
-          style={styles.input}
-          type="tel"
-          placeholder="Phone Number"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          required
-        />
+        <input style={styles.input} type="text" placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} required />
+        <input style={styles.input} type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        <input style={styles.input} type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+        <input style={styles.input} type="tel" placeholder="Phone Number" value={phone} onChange={(e) => setPhone(e.target.value)} required />
         <button style={styles.button} type="submit">Sign Up</button>
       </form>
       <p style={styles.linkText}>
         Already have an account? <Link to="/login" style={styles.link}>Login</Link>
       </p>
 
-      {/* Styled Alert */}
       {alert && (
-        <div
-          style={{
-            position: 'fixed',
-            top: '20px',
-            right: '20px',
-            backgroundColor: alert.type === 'success' ? '#4caf50' : '#2196f3',
-            color: '#fff',
-            padding: '15px 25px',
-            borderRadius: '8px',
-            fontWeight: 'bold',
-            boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
-            zIndex: 1000,
-            transition: 'all 0.3s ease',
-          }}
-        >
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          backgroundColor: alert.type === 'success' ? '#4caf50' : '#2196f3',
+          color: '#fff',
+          padding: '15px 25px',
+          borderRadius: '8px',
+          fontWeight: 'bold',
+          boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+          zIndex: 1000,
+          transition: 'all 0.3s ease',
+        }}>
           {alert.message}
         </div>
       )}
