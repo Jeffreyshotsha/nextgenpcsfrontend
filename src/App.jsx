@@ -1,56 +1,41 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { AuthProvider } from './Components/AuthContext';
+import React, { useState, useEffect } from 'react';
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+} from 'react-router-dom';
+import { AuthProvider } from "./context/AuthContext";
+
+// Components
 import Signup from './Components/Signup';
 import Login from './Components/Login';
 import Home from './Components/Home';
 import Product from './Components/Product';
 import Cart from './Components/Cart';
 import Checkout from './Components/Checkout';
-import Order from './Components/Order';
+import Orders from './Components/Order'; 
 import Profile from './Components/Profile';
 import Navbar from './Components/Navbar';
-import { useState, useEffect } from 'react';
 
-// -------------------- 🔹 IP Switcher Hook --------------------
-const useApiIp = () => {
-  const urlParams = new URLSearchParams(window.location.search);
-  const defaultIp = urlParams.get("ip") || localStorage.getItem("apiIp") || "54.210.134.176"; // default EC2 IP
-  const [ip, setIp] = useState(defaultIp);
-
-  const updateIP = (newIp) => {
-    if (!newIp) return;
-    const url = new URL(window.location);
-    url.searchParams.set("ip", newIp);
-    window.history.pushState({}, "", url); // Update URL in browser
-    setIp(newIp);
-    localStorage.setItem("apiIp", newIp); // Save IP locally
-  };
-
-  const getApiUrl = () => {
-    const API_HOST = ip || "127.0.0.1";
-    return `http://${API_HOST}:3000`; // adjust port if needed
-  };
-
-  return { ip, updateIP, getApiUrl };
-};
-
-// -------------------- 🔹 Protected Routes --------------------
+// Protected Route
 const ProtectedRoute = ({ children }) => {
-  const isAuthenticated = localStorage.getItem('Auth');
-  return isAuthenticated ? children : <Navigate to="/login" />;
+  const isAuthenticated = !!localStorage.getItem('user'); 
+  return isAuthenticated ? children : <Navigate to="/login" replace />;
 };
 
-// -------------------- 🔹 Layout Wrapper --------------------
+// Layout Wrapper
 const Layout = ({ children, darkMode, toggleMode }) => {
   const location = useLocation();
-  const hideNavbarPaths = ['/', '/login'];
+  const hideNavbarPaths = ['/', '/login', '/signup'];
   const showNavbar = !hideNavbarPaths.includes(location.pathname);
 
-  const darkModePages = ['/products', '/cart', '/checkout', '/profile'];
+  const darkModePages = ['/products', '/cart', '/checkout', '/orders', '/order', '/profile'];
   const isDarkPage = darkMode && darkModePages.includes(location.pathname);
 
-  const bgColor = isDarkPage ? '#000' : '#fff';
-  const textColor = isDarkPage ? '#FFFF00' : '#000';
+  const bgColor = isDarkPage ? '#000000ab' : '#ffffffb0';
+  const textColor = isDarkPage ? '#b80000ff' : '#000';
 
   return (
     <div
@@ -61,56 +46,93 @@ const Layout = ({ children, darkMode, toggleMode }) => {
         transition: 'all 0.3s ease',
       }}
     >
-      {showNavbar && <Navbar darkMode={isDarkPage} toggleMode={toggleMode} />}
-      {children}
+      {showNavbar && <Navbar darkMode={darkMode} toggleMode={toggleMode} />}
+      <main>{children}</main>
     </div>
   );
 };
 
-// -------------------- 🔹 Main App --------------------
+// 404 Page
+const NotFound = () => (
+  <div style={{ textAlign: 'center', padding: '100px 20px' }}>
+    <h1 style={{ fontSize: '48px', marginBottom: '16px' }}>404</h1>
+    <p>Page not found</p>
+    <a href="/home" style={{ color: '#b80000ff', textDecoration: 'underline' }}>
+      Go back home
+    </a>
+  </div>
+);
+
+// Main App
 function App() {
-  const [darkMode, setDarkMode] = useState(false);
-  const toggleMode = () => setDarkMode(!darkMode);
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('darkMode');
+    if (saved !== null) return JSON.parse(saved);
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
 
-  // -------------------- 🔹 Use IP Hook --------------------
-  const { ip, updateIP, getApiUrl } = useApiIp();
-
-  useEffect(() => {
-    console.log("Current API base URL:", getApiUrl());
-  }, [ip]);
+  const toggleMode = () => {
+    setDarkMode(prev => {
+      const newMode = !prev;
+      localStorage.setItem('darkMode', JSON.stringify(newMode));
+      return newMode;
+    });
+  };
 
   return (
     <AuthProvider>
       <BrowserRouter>
-        {/* Small helper UI to change EC2 IP dynamically */}
-        <div style={{ padding: "10px", background: "#eee" }}>
-          <input
-            type="text"
-            value={ip}
-            placeholder="Enter EC2 Public IP"
-            onChange={(e) => updateIP(e.target.value)}
-            style={{ marginRight: "10px" }}
-          />
-          <span>API Base: {getApiUrl()}</span>
-        </div>
-
         <Layout darkMode={darkMode} toggleMode={toggleMode}>
           <Routes>
-            <Route path="/" element={<Signup apiBase={getApiUrl()} />} />
-            <Route path="/login" element={<Login apiBase={getApiUrl()} />} />
+            {/* Public */}
+            <Route path="/" element={<Signup />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/login" element={<Login />} />
+
+            {/* Protected */}
             <Route
               path="/home"
               element={
                 <ProtectedRoute>
-                  <Home apiBase={getApiUrl()} />
+                  <Home />
                 </ProtectedRoute>
               }
             />
-            <Route path="/products" element={<Product darkMode={darkMode} apiBase={getApiUrl()} />} />
-            <Route path="/cart" element={<Cart darkMode={darkMode} apiBase={getApiUrl()} />} />
-            <Route path="/checkout" element={<Checkout darkMode={darkMode} apiBase={getApiUrl()} />} />
-            <Route path="/profile" element={<Profile darkMode={darkMode} apiBase={getApiUrl()} />} />
-            <Route path="/orders/:orderId" element={<Order darkMode={darkMode} apiBase={getApiUrl()} />} />
+
+            {/* Public pages */}
+            <Route path="/products" element={<Product darkMode={darkMode} />} />
+            <Route path="/cart" element={<Cart darkMode={darkMode} />} />
+            <Route path="/checkout" element={<Checkout darkMode={darkMode} />} />
+
+            {/* Orders */}
+            <Route
+              path="/orders"
+              element={
+                <ProtectedRoute>
+                  <Orders darkMode={darkMode} />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/order"
+              element={
+                <ProtectedRoute>
+                  <Orders darkMode={darkMode} />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile darkMode={darkMode} />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* 404 */}
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </Layout>
       </BrowserRouter>

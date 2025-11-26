@@ -1,0 +1,4 @@
+[
+  { "_id": "1", "brand": "Dell", "model": "XPS 13", "price": 1200, "image_url": "..." },
+  { "_id": "2", "brand": "Dell", "model": "Inspiron 15", "price": 800, "image_url": "..." }
+]

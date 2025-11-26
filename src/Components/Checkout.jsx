@@ -1,408 +1,580 @@
-import React, { useState, useEffect } from "react";
+// src/components/Checkout.jsx
+import React, { useContext, useEffect, useState } from "react";
+import { AuthContext } from "../context/AuthContext";
+import { useNavigate } from "react-router-dom"; // added for navigation
 
-const Checkout = () => {
+const Checkout = ({ darkMode }) => {
+  const { user } = useContext(AuthContext);
+  const navigate = useNavigate(); // added for continue shopping
+
+  const cartKey = user ? `cart_${user.id}` : "cart_guest";
   const [cart, setCart] = useState([]);
-  const [paymentMethod, setPaymentMethod] = useState("credit-card");
+  const [loading, setLoading] = useState(true);
 
-  const [formData, setFormData] = useState({
-    cardNumber: "",
-    cardExpiry: "",
-    cardCVV: "",
-    cardHolder: "",
-    paypalEmail: "",
+  const [currency, setCurrency] = useState("ZAR");
+  const currencySymbols = { ZAR: "R", USD: "$", GBP: "£", EUR: "€" };
+  const conversionRates = { ZAR: 1, USD: 0.055, GBP: 0.043, EUR: 0.05 };
+
+  const [paymentType, setPaymentType] = useState("instalment");
+  const [instalmentMonths, setInstalmentMonths] = useState(3);
+
+  const [cardInfo, setCardInfo] = useState({ number: "", expiry: "", cvv: "" });
+  const [eftInfo, setEftInfo] = useState({ bank: "", accountNumber: "", holder: "" });
+  const [instalmentInfo, setInstalmentInfo] = useState({
+    name: "",
+    email: "",
+    idNumber: "",
     bankName: "",
     accountNumber: "",
-    accountHolder: "",
-    instalmentMonths: "3",
-    instalBankName: "",
-    instalAccountNumber: "",
-    instalAccountHolder: "",
-    instalAddress: "",
-    instalPhone: "",
-    instalID: "",
   });
 
+  const [delivery, setDelivery] = useState("pickup");
+  const [deliveryInfo, setDeliveryInfo] = useState({ address: "" });
+
+  const [showConfirmation, setShowConfirmation] = useState(false);
+
+  const theme = {
+    bg: darkMode ? "#000" : "#f5f5f5",
+    cardBg: darkMode ? "#111" : "#fff",
+    text: darkMode ? "#fff" : "#000",
+    textMuted: darkMode ? "#ccc" : "#555",
+    buttonBg: darkMode ? "#000" : "#000",
+    buttonText: darkMode ? "#fff" : "#fff",
+  };
+
+  const containerStyle = {
+    marginTop: "20px",
+    padding: "15px",
+    backgroundColor: theme.cardBg,
+    borderRadius: "10px",
+    maxWidth: "450px",
+    margin: "20px auto",
+  };
+
   useEffect(() => {
-    const storedCart = JSON.parse(localStorage.getItem("cart")) || [];
-    setCart(storedCart);
-  }, []);
+    const stored = JSON.parse(localStorage.getItem(cartKey) || "[]");
+    setCart(stored);
+    setLoading(false);
+  }, [cartKey]);
 
-  const updateCart = (updatedCart) => {
-    setCart(updatedCart);
-    localStorage.setItem("cart", JSON.stringify(updatedCart));
-    window.dispatchEvent(new Event("storage"));
+  const saveCart = (newCart) => {
+    if (user) localStorage.setItem(cartKey, JSON.stringify(newCart));
+    setCart(newCart);
   };
 
-  const handleIncrease = (index) => {
-    const updatedCart = [...cart];
-    updatedCart[index].quantity += 1;
-    updateCart(updatedCart);
+  const increaseQty = (id) => {
+    const updated = cart.map((item) =>
+      item.id === id ? { ...item, quantity: item.quantity + 1 } : item
+    );
+    saveCart(updated);
   };
 
-  const handleDecrease = (index) => {
-    const updatedCart = [...cart];
-    if (updatedCart[index].quantity > 1) {
-      updatedCart[index].quantity -= 1;
-    } else {
-      updatedCart.splice(index, 1);
-    }
-    updateCart(updatedCart);
+  const decreaseQty = (id) => {
+    const updated = cart.map((item) =>
+      item.id === id ? { ...item, quantity: Math.max(1, item.quantity - 1) } : item
+    );
+    saveCart(updated);
   };
 
-  const handleDelete = (index) => {
-    const updatedCart = [...cart];
-    updatedCart.splice(index, 1);
-    updateCart(updatedCart);
-  };
+  const convertedPrice = (amount) =>
+    (amount * conversionRates[currency]).toFixed(2);
 
-  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const totalOriginal = cart.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
 
-  const validateForm = () => {
-    switch (paymentMethod) {
-      case "credit-card":
-        return (
-          formData.cardNumber &&
-          formData.cardExpiry &&
-          formData.cardCVV &&
-          formData.cardHolder
-        );
-      case "paypal":
-        return formData.paypalEmail;
-      case "eft":
-        return formData.bankName && formData.accountNumber && formData.accountHolder;
-      case "instalments":
-        return (
-          formData.instalmentMonths &&
-          formData.instalBankName &&
-          formData.instalAccountNumber &&
-          formData.instalAccountHolder &&
-          formData.instalAddress &&
-          formData.instalPhone &&
-          formData.instalID.length === 13
-        );
-      default:
-        return false;
-    }
-  };
+  const deliveryFee = delivery === "delivery" ? 75 : 0;
+  const totalConverted = convertedPrice(totalOriginal + deliveryFee);
+  const monthlyPayment =
+    paymentType === "instalment"
+      ? (totalConverted / instalmentMonths).toFixed(2)
+      : null;
 
-  const handleCheckout = async () => {
-    if (!validateForm()) {
-      alert(
-        "Please fill all required payment fields before checkout. (ID must be 13 digits)"
-      );
+  const handlePurchase = async () => {
+  // Validate payment forms
+  if (paymentType === "card") {
+    if (
+      !cardInfo.number ||
+      !cardInfo.expiry ||
+      !cardInfo.cvv ||
+      cardInfo.number.length < 12 ||
+      cardInfo.number.length > 19 ||
+      cardInfo.cvv.length !== 3
+    ) {
+      alert("Please fill all card fields correctly");
       return;
     }
+  }
+  if (paymentType === "eft") {
+    if (!eftInfo.bank || !eftInfo.accountNumber || !eftInfo.holder) {
+      alert("Please fill all EFT fields");
+      return;
+    }
+  }
+  if (paymentType === "instalment") {
+    if (
+      !instalmentInfo.name ||
+      !instalmentInfo.email ||
+      !instalmentInfo.idNumber ||
+      !instalmentInfo.bankName ||
+      !instalmentInfo.accountNumber
+    ) {
+      alert("Please fill all instalment fields including banking details");
+      return;
+    }
+  }
+  if (delivery === "delivery" && !deliveryInfo.address) {
+    alert("Please enter delivery address");
+    return;
+  }
 
-    const order = {
-      items: cart,
-      total,
-      paymentMethod,
-      date: new Date().toISOString(),
-      status: "Pending",
-      paymentStatus: paymentMethod === "instalments" ? "Pending" : "Paid",
-      shippingAddress: formData.instalAddress || "",
-      deliveryEstimate: "",
-      trackingLink: "",
-    };
-
+  // ===================== POST ORDER TO BACKEND =====================
+  if (user && cart.length > 0) {
     try {
-      const response = await fetch("http://localhost:3000/orders", {
+      await fetch("http://localhost:3000/orders", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(order),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({
+          items: cart,
+          delivery,
+          paymentType,
+        }),
       });
-      const data = await response.json();
-
-      if (data._id || data.insertedId || Object.keys(data).length) {
-        if (paymentMethod === "instalments") {
-          const perMonth = (total / Number(formData.instalmentMonths)).toFixed(2);
-          alert(
-            `Checkout successful!\nYou will pay in ${formData.instalmentMonths} instalments.\nEach instalment: ZAR ${perMonth}`
-          );
-        } else {
-          alert(`Checkout successful with ${paymentMethod}!\nThank you for your purchase.`);
-        }
-
-        updateCart([]); // Clear cart after checkout
-      } else {
-        alert("Failed to place order. Try again.");
-      }
+      console.log("Order posted successfully to backend");
     } catch (err) {
-      console.error("Checkout failed:", err);
-      alert("Failed to place order. Try again.");
+      console.error("Failed to post order:", err);
     }
-  };
+  }
 
-  const renderPaymentForm = () => {
-    switch (paymentMethod) {
-      case "credit-card":
-        return (
-          <div style={centeredForm}>
-            <input
-              style={inputStyle}
-              type="text"
-              placeholder="Card Number"
-              value={formData.cardNumber}
-              onChange={(e) => setFormData({ ...formData, cardNumber: e.target.value })}
-            />
-            <input
-              style={inputStyle}
-              type="text"
-              placeholder="Expiry (MM/YY)"
-              value={formData.cardExpiry}
-              onChange={(e) => setFormData({ ...formData, cardExpiry: e.target.value })}
-            />
-            <input
-              style={inputStyle}
-              type="text"
-              placeholder="CVV"
-              value={formData.cardCVV}
-              onChange={(e) => setFormData({ ...formData, cardCVV: e.target.value })}
-            />
-            <input
-              style={inputStyle}
-              type="text"
-              placeholder="Card Holder Name"
-              value={formData.cardHolder}
-              onChange={(e) => setFormData({ ...formData, cardHolder: e.target.value })}
-            />
-          </div>
-        );
+  // Clear checkout page
+  setCart([]);
+  setCardInfo({ number: "", expiry: "", cvv: "" });
+  setEftInfo({ bank: "", accountNumber: "", holder: "" });
+  setInstalmentInfo({ name: "", email: "", idNumber: "", bankName: "", accountNumber: "" });
+  setDeliveryInfo({ address: "" });
 
-      case "paypal":
-        return (
-          <div style={centeredForm}>
-            <input
-              style={inputStyle}
-              type="email"
-              placeholder="PayPal Email"
-              value={formData.paypalEmail}
-              onChange={(e) => setFormData({ ...formData, paypalEmail: e.target.value })}
-            />
-          </div>
-        );
+  // Show confirmation screen
+  setShowConfirmation(true);
 
-      case "eft":
-        return (
-          <div style={centeredForm}>
-            <input
-              style={inputStyle}
-              type="text"
-              placeholder="Bank Name"
-              value={formData.bankName}
-              onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
-            />
-            <input
-              style={inputStyle}
-              type="text"
-              placeholder="Account Number"
-              value={formData.accountNumber}
-              onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })}
-            />
-            <input
-              style={inputStyle}
-              type="text"
-              placeholder="Account Holder Name"
-              value={formData.accountHolder}
-              onChange={(e) => setFormData({ ...formData, accountHolder: e.target.value })}
-            />
-          </div>
-        );
+  // Clear cart from localStorage
+  localStorage.removeItem(cartKey);
+  window.dispatchEvent(new Event("localStorageChanged"));
+};
 
-      case "instalments":
-        const months = Number(formData.instalmentMonths || 1);
-        const perMonth = total / months;
-        const instalWarning =
-          months <= 2 ? "⚠️ Your instalment period is very short. Make sure you can pay on time!" : "";
-
-        return (
-          <div style={centeredForm}>
-            <label style={{ fontWeight: "bold" }}>Number of Instalments:</label>
-            <select
-              value={formData.instalmentMonths}
-              onChange={(e) =>
-                setFormData({ ...formData, instalmentMonths: e.target.value })
-              }
-              style={{ ...inputStyle, width: "100%" }}
-            >
-              <option value="3">3 months</option>
-              <option value="6">6 months</option>
-              <option value="12">12 months</option>
-            </select>
-
-            <p style={{ marginTop: "10px", fontWeight: "bold" }}>
-              You will pay ZAR {perMonth.toFixed(2)} per month
-            </p>
-
-            {instalWarning && (
-              <p style={{ color: "red", fontWeight: "bold" }}>{instalWarning}</p>
-            )}
-
-            <input
-              style={inputStyle}
-              type="text"
-              placeholder="Bank Name"
-              value={formData.instalBankName}
-              onChange={(e) => setFormData({ ...formData, instalBankName: e.target.value })}
-            />
-            <input
-              style={inputStyle}
-              type="text"
-              placeholder="Account Number"
-              value={formData.instalAccountNumber}
-              onChange={(e) => setFormData({ ...formData, instalAccountNumber: e.target.value })}
-            />
-            <input
-              style={inputStyle}
-              type="text"
-              placeholder="Account Holder"
-              value={formData.instalAccountHolder}
-              onChange={(e) => setFormData({ ...formData, instalAccountHolder: e.target.value })}
-            />
-            <input
-              style={inputStyle}
-              type="text"
-              placeholder="Physical Address"
-              value={formData.instalAddress}
-              onChange={(e) => setFormData({ ...formData, instalAddress: e.target.value })}
-            />
-            <input
-              style={inputStyle}
-              type="tel"
-              placeholder="Phone Number"
-              value={formData.instalPhone}
-              onChange={(e) => {
-                if (/^\d*$/.test(e.target.value)) {
-                  setFormData({ ...formData, instalPhone: e.target.value });
-                }
-              }}
-            />
-            <input
-              style={inputStyle}
-              type="text"
-              placeholder="ID Number (13 digits)"
-              value={formData.instalID}
-              onChange={(e) => {
-                if (/^\d*$/.test(e.target.value)) {
-                  setFormData({ ...formData, instalID: e.target.value });
-                }
-              }}
-            />
-          </div>
-        );
-
-      default:
-        return null;
-    }
-  };
+  if (loading) {
+    return (
+      <div
+        style={{
+          color: theme.text,
+          padding: "40px",
+          textAlign: "center",
+        }}
+      >
+        Loading checkout…
+      </div>
+    );
+  }
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h1 style={{ textAlign: "center", marginBottom: "30px" }}>Checkout</h1>
-
-      {cart.length === 0 ? (
-        <p style={{ textAlign: "center" }}>Your cart is empty</p>
-      ) : (
-        <>
-          {/* Cart */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-            {cart.map((item, index) => (
-              <div
-                key={index}
-                style={{
-                  border: "1px solid #000",
-                  borderRadius: "8px",
-                  padding: "10px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  flexWrap: "wrap",
-                }}
-              >
-                <img
-                  src={item.image_url || item.image || "https://via.placeholder.com/80"}
-                  alt={item.name || item.model}
-                  style={{ width: "80px", height: "80px", objectFit: "cover", borderRadius: "6px" }}
-                />
-                <div style={{ flex: 1, marginLeft: "15px" }}>
-                  <h3>{item.name || item.model}</h3>
-                  <p>ZAR {item.price}</p>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <button onClick={() => handleDecrease(index)} style={btnStyle}>–</button>
-                  <span>{item.quantity}</span>
-                  <button onClick={() => handleIncrease(index)} style={btnStyle}>+</button>
-                </div>
-                <button onClick={() => handleDelete(index)} style={{ ...btnStyle, backgroundColor: "red" }}>
-                  Delete
-                </button>
-              </div>
-            ))}
-          </div>
-
-          <h2 style={{ textAlign: "center", marginTop: "30px" }}>Total: ZAR {total}</h2>
-
-          {/* Payment Method */}
-          <div style={{ marginTop: "20px", textAlign: "center" }}>
-            <label style={{ marginRight: "10px", fontWeight: "bold" }}>Payment Method:</label>
-            <select
-              value={paymentMethod}
-              onChange={(e) => setPaymentMethod(e.target.value)}
-              style={{ padding: "8px", borderRadius: "6px", border: "1px solid #ccc" }}
-            >
-              <option value="credit-card">Credit Card</option>
-              <option value="paypal">PayPal</option>
-              <option value="eft">EFT / Bank Account</option>
-              <option value="instalments">Pay in Instalments</option>
-            </select>
-          </div>
-
-          {/* Payment Form */}
-          <div style={{ marginTop: "20px" }}>{renderPaymentForm()}</div>
-
-          <div style={{ textAlign: "center", marginTop: "20px" }}>
-            <button
-              onClick={handleCheckout}
+    <div
+      style={{
+        backgroundColor: theme.bg,
+        minHeight: "100vh",
+        padding: "30px",
+        display: "flex",
+        justifyContent: "center",
+      }}
+    >
+      <div style={{ width: "100%", maxWidth: "1000px", color: theme.text }}>
+        {/* ================= CONFIRMATION SCREEN ================= */}
+        {showConfirmation && (
+          <div
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+              backgroundColor: "rgba(0,0,0,0.85)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#fff",
+              zIndex: 9999,
+              animation: "fadeIn 0.5s",
+            }}
+          >
+            <h1 style={{ fontSize: "48px", marginBottom: "20px" }}>Purchase Complete!</h1>
+            <p style={{ fontSize: "20px", marginBottom: "40px" }}>
+              Thank you for your order.
+            </p>
+            <div
               style={{
-                padding: "12px 20px",
-                backgroundColor: "#000",
-                color: "#fff",
-                border: "none",
+                width: "80px",
+                height: "80px",
+                border: "5px solid #fff",
+                borderTop: "5px solid #00C853",
+                borderRadius: "50%",
+                animation: "spin 1s linear infinite",
+                marginBottom: "40px",
+              }}
+            ></div>
+            {/* ===== CONTINUE SHOPPING BUTTON ===== */}
+            <button
+              onClick={() => navigate("/products")}
+              style={{
+                padding: "12px 25px",
+                fontSize: "18px",
                 borderRadius: "8px",
+                border: "none",
+                backgroundColor: "#00C853",
+                color: "#fff",
                 cursor: "pointer",
-                fontWeight: "bold",
               }}
             >
-              Checkout
+              Continue Shopping
             </button>
           </div>
-        </>
-      )}
+        )}
+
+        {cart.length > 0 && (
+          <>
+            <h1 style={{ textAlign: "center" }}>Checkout</h1>
+
+            {/* ================= PRODUCT LIST ================= */}
+            <div style={containerStyle}>
+              {cart.map((item) => (
+                <div
+                  key={item.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    backgroundColor: theme.cardBg,
+                    padding: "15px",
+                    borderRadius: "10px",
+                    marginBottom: "15px",
+                  }}
+                >
+                  <img
+                    src={item.image || item.image_url || "/no-image.png"}
+                    alt={item.model}
+                    style={{
+                      width: "120px",
+                      height: "120px",
+                      borderRadius: "8px",
+                      objectFit: "cover",
+                      marginRight: "20px",
+                    }}
+                  />
+                  <div style={{ flexGrow: 1 }}>
+                    <h3>{item.brand} {item.model}</h3>
+                    <p style={{ color: theme.textMuted }}>
+                      Original Price (ZAR): R {item.price.toFixed(2)}
+                    </p>
+                    <p>
+                      Converted: {currencySymbols[currency]} {convertedPrice(item.price)}
+                    </p>
+                    <p>Qty: {item.quantity}</p>
+                    <div style={{ display: "flex", gap: "10px", marginTop: "5px" }}>
+                      <button onClick={() => decreaseQty(item.id)} style={qtyBtn(theme)}>-</button>
+                      <button onClick={() => increaseQty(item.id)} style={qtyBtn(theme)}>+</button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* ================= CURRENCY ================= */}
+            <div style={containerStyle}>
+              <label style={{ fontWeight: "bold" }}>Choose Currency:</label>
+              <select
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value)}
+                style={selectStyle(theme, darkMode)}
+              >
+                <option value="ZAR">Rand (ZAR)</option>
+                <option value="USD">Dollar (USD)</option>
+                <option value="GBP">Pound (GBP)</option>
+                <option value="EUR">Euro (EUR)</option>
+              </select>
+            </div>
+
+            {/* ================= PAYMENT METHOD ================= */}
+            <div style={containerStyle}>
+              <label style={{ fontWeight: "bold" }}>Payment Method:</label>
+              <div style={{ marginTop: "10px" }}>
+                <label>
+                  <input
+                    type="radio"
+                    value="instalment"
+                    checked={paymentType === "instalment"}
+                    onChange={() => setPaymentType("instalment")}
+                  />{" "}
+                  Pay in Instalments
+                </label>
+                <br />
+                <label>
+                  <input
+                    type="radio"
+                    value="card"
+                    checked={paymentType === "card"}
+                    onChange={() => setPaymentType("card")}
+                  />{" "}
+                  Debit / Credit Card
+                </label>
+                <br />
+                <label>
+                  <input
+                    type="radio"
+                    value="eft"
+                    checked={paymentType === "eft"}
+                    onChange={() => setPaymentType("eft")}
+                  />{" "}
+                  EFT
+                </label>
+              </div>
+
+              {paymentType === "instalment" && (
+                <div style={{ marginTop: "15px" }}>
+                  <label>Months:</label>
+                  <select
+                    value={instalmentMonths}
+                    onChange={(e) => setInstalmentMonths(Number(e.target.value))}
+                    style={selectStyle(theme, darkMode)}
+                  >
+                    <option value={3}>3 Months</option>
+                    <option value={6}>6 Months</option>
+                    <option value={12}>12 Months</option>
+                  </select>
+
+                  <p style={{ marginTop: "10px", color: theme.textMuted }}>
+                    Monthly Payment:
+                    <strong>
+                      {" "}
+                      {currencySymbols[currency]} {monthlyPayment}
+                    </strong>
+                  </p>
+
+                  <label>Name:</label>
+                  <input
+                    type="text"
+                    value={instalmentInfo.name}
+                    onChange={(e) =>
+                      setInstalmentInfo({ ...instalmentInfo, name: e.target.value })
+                    }
+                    required
+                    style={inputStyle(theme)}
+                  />
+                  <label>Email:</label>
+                  <input
+                    type="email"
+                    value={instalmentInfo.email}
+                    onChange={(e) =>
+                      setInstalmentInfo({ ...instalmentInfo, email: e.target.value })
+                    }
+                    required
+                    style={inputStyle(theme)}
+                  />
+                  <label>ID Number:</label>
+                  <input
+                    type="text"
+                    value={instalmentInfo.idNumber}
+                    onChange={(e) =>
+                      setInstalmentInfo({ ...instalmentInfo, idNumber: e.target.value })
+                    }
+                    required
+                    style={inputStyle(theme)}
+                  />
+                  <label>Bank Name:</label>
+                  <input
+                    type="text"
+                    value={instalmentInfo.bankName}
+                    onChange={(e) =>
+                      setInstalmentInfo({ ...instalmentInfo, bankName: e.target.value })
+                    }
+                    required
+                    style={inputStyle(theme)}
+                  />
+                  <label>Account Number:</label>
+                  <input
+                    type="text"
+                    value={instalmentInfo.accountNumber}
+                    onChange={(e) =>
+                      setInstalmentInfo({ ...instalmentInfo, accountNumber: e.target.value })
+                    }
+                    required
+                    style={inputStyle(theme)}
+                  />
+                </div>
+              )}
+
+              {paymentType === "card" && (
+                <div style={{ marginTop: "15px" }}>
+                  <label>Card Number:</label>
+                  <input
+                    type="text"
+                    value={cardInfo.number}
+                    maxLength={19}
+                    onChange={(e) => setCardInfo({ ...cardInfo, number: e.target.value })}
+                    required
+                    style={inputStyle(theme)}
+                  />
+                  <label>Expiry (MM/YY):</label>
+                  <input
+                    type="text"
+                    value={cardInfo.expiry}
+                    maxLength={5}
+                    onChange={(e) => setCardInfo({ ...cardInfo, expiry: e.target.value })}
+                    required
+                    style={inputStyle(theme)}
+                  />
+                  <label>CVV:</label>
+                  <input
+                    type="text"
+                    value={cardInfo.cvv}
+                    maxLength={3}
+                    onChange={(e) => setCardInfo({ ...cardInfo, cvv: e.target.value })}
+                    required
+                    style={inputStyle(theme)}
+                  />
+                </div>
+              )}
+
+              {paymentType === "eft" && (
+                <div style={{ marginTop: "15px" }}>
+                  <label>Bank Name:</label>
+                  <input
+                    type="text"
+                    value={eftInfo.bank}
+                    onChange={(e) => setEftInfo({ ...eftInfo, bank: e.target.value })}
+                    required
+                    style={inputStyle(theme)}
+                  />
+                  <label>Account Number:</label>
+                  <input
+                    type="text"
+                    value={eftInfo.accountNumber}
+                    onChange={(e) => setEftInfo({ ...eftInfo, accountNumber: e.target.value })}
+                    required
+                    style={inputStyle(theme)}
+                  />
+                  <label>Account Holder:</label>
+                  <input
+                    type="text"
+                    value={eftInfo.holder}
+                    onChange={(e) => setEftInfo({ ...eftInfo, holder: e.target.value })}
+                    required
+                    style={inputStyle(theme)}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* ================= DELIVERY ================= */}
+            <div style={containerStyle}>
+              <label style={{ fontWeight: "bold" }}>Delivery Option:</label>
+              <select
+                value={delivery}
+                onChange={(e) => setDelivery(e.target.value)}
+                style={selectStyle(theme, darkMode)}
+              >
+                <option value="pickup">Pickup (Free)</option>
+                <option value="delivery">Delivery (+R75)</option>
+              </select>
+
+              {delivery === "delivery" && (
+                <div style={{ marginTop: "10px" }}>
+                  <label>Address:</label>
+                  <input
+                    type="text"
+                    value={deliveryInfo.address}
+                    onChange={(e) =>
+                      setDeliveryInfo({ ...deliveryInfo, address: e.target.value })}
+                    required
+                    style={inputStyle(theme)}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* ================= TOTAL ================= */}
+            <h2 style={{ textAlign: "center", marginTop: "20px" }}>
+              Total: {currencySymbols[currency]} {totalConverted}
+            </h2>
+            <h4 style={{ textAlign: "center", color: theme.textMuted }}>
+              (Original: R {totalOriginal.toFixed(2)} + Delivery: R{deliveryFee})
+            </h4>
+
+            {/* ================= PURCHASE BUTTON ================= */}
+            <div style={{ textAlign: "center" }}>
+              <button
+                onClick={handlePurchase}
+                style={{
+                  marginTop: "25px",
+                  padding: "15px 25px",
+                  backgroundColor: theme.buttonBg,
+                  color: theme.buttonText,
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "18px",
+                  cursor: "pointer",
+                }}
+              >
+                Purchase
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 };
 
-// Styles
-const btnStyle = {
-  padding: "8px 12px",
-  backgroundColor: "#000",
-  color: "#fff",
-  border: "none",
+// ====== UTILS ======
+const qtyBtn = (theme) => ({
+  padding: "6px 12px",
+  backgroundColor: theme.buttonBg,
+  color: theme.buttonText,
   borderRadius: "6px",
   cursor: "pointer",
+  border: "none",
   fontWeight: "bold",
-};
+});
 
-const inputStyle = {
-  display: "block",
+const inputStyle = (theme) => ({
   width: "100%",
-  maxWidth: "300px",
   padding: "8px",
-  margin: "10px auto",
+  marginTop: "5px",
+  marginBottom: "10px",
   borderRadius: "6px",
-  border: "1px solid #ccc",
-};
+  border: `1px solid ${theme.textMuted}`,
+  backgroundColor: theme.bg,
+  color: theme.text,
+});
 
-const centeredForm = { textAlign: "center", marginTop: "20px" };
+const selectStyle = (theme, darkMode) => ({
+  marginTop: "5px",
+  padding: "8px",
+  borderRadius: "6px",
+  backgroundColor: darkMode ? "#222" : "#fff",
+  color: theme.text,
+  width: "100%",
+});
+
+// ====== ANIMATIONS ======
+const styleSheet = document.styleSheets[0];
+styleSheet.insertRule(
+  `@keyframes fadeIn { from {opacity:0} to {opacity:1} }`,
+  styleSheet.cssRules.length
+);
+styleSheet.insertRule(
+  `@keyframes spin { 0% { transform: rotate(0deg) } 100% { transform: rotate(360deg) } }`,
+  styleSheet.cssRules.length
+);
 
 export default Checkout;
