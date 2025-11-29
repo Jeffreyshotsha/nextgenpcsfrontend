@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: nextgenpcs-frontend
+    env: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
