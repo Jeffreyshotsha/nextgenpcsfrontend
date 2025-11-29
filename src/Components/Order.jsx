@@ -22,7 +22,7 @@ const Orders = ({ darkMode }) => {
       if (user) {
         try {
           const token = localStorage.getItem("token");
-          const response = await axios.get("http://localhost:3000/orders", {
+          const response = await axios.get("https://nextgenpcsbackend.onrender.com/orders", {
             headers: { Authorization: `Bearer ${token}` },
           });
           fetchedOrders = response.data;
@@ -75,7 +75,7 @@ const Orders = ({ darkMode }) => {
           if (prev[id] > 0 && newTime === 0) {
             const order = orders.find((o) => o._id === id);
             if (order && user) {
-              axios.post("http://localhost:3000/send-order-email", {
+              axios.post("https://nextgenpcsbackend.onrender.com/send-order-email", {
                 userEmail: user.email,
                 orderId: order._id,
                 delivery: order.delivery,
