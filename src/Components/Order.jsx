@@ -179,7 +179,7 @@ const DeliveryMap = ({ countdown }) => {
     setProgress((TOTAL - countdown) / TOTAL);
   }, [countdown]);
 
-  const verticalRoads = ["20%", "30%", "40%", "50%", "60%", "70%", "80%"];
+  const verticalRoads = ["20%", "30%", "40%", "50%", "60%", "70%", "80%","60%", "70%", "80%"];
   const horizontalRoads = ["20%", "35%", "50%", "65%"];
 
   return (
@@ -187,9 +187,9 @@ const DeliveryMap = ({ countdown }) => {
       {horizontalRoads.map((top, i) => <div key={i} style={{ position: "absolute", top, left: 0, width: "100%", height: "40px", backgroundColor: "#636363", zIndex: 2 }} />)}
       {verticalRoads.map((left, i) => <div key={i} style={{ position: "absolute", top: 0, left, width: "25px", height: "100%", backgroundColor: "#555", zIndex: 3 }} />)}
       {verticalRoads.map((left, i) => <React.Fragment key={i}><TrafficLight top="35%" left={left} /><TrafficLight top="65%" left={left} /></React.Fragment>)}
-      <div style={{ position: "absolute", left: `${Math.min(progress*100, 100)}%`, top: "50%", transform: "translate(-50%, -50%)", fontSize: "40px", transition: "left 1s linear", zIndex: 7 }}>🚘</div>
-      <div style={{ position: "absolute", left: "5%", top: "50%", transform: "translate(-50%, -130%)", fontSize: "30px", zIndex: 6 }}>📍</div>
-      <div style={{ position: "absolute", left: "95%", top: "50%", transform: "translate(-50%, -130%)", fontSize: "30px", zIndex: 6 }}>🏪</div>
+      <div style={{ position: "absolute", left: `${Math.min(progress*100, 100)}%`, top: "50%", transform: "translate(-50%, -50%)", fontSize: "40px", transition: "left 1s linear", zIndex: 7 }}></div>
+      <div style={{ position: "absolute", left: "5%", top: "50%", transform: "translate(-50%, -130%)", fontSize: "30px", zIndex: 6 }}>🏪</div>
+      <div style={{ position: "absolute", left: "95%", top: "50%", transform: "translate(-50%, -130%)", fontSize: "30px", zIndex: 6 }}>📍</div>
     </div>
   );
 };
@@ -201,18 +201,33 @@ const PickupMap = ({ orderId }) => {
   React.useEffect(() => { localStorage.setItem(`pickup_${orderId}`, progress); }, [progress, orderId]);
 
   return (
-    <div style={{ width: "100%", height: "100%", backgroundColor: "#d3d3d3", borderRadius: "12px", position: "relative", overflow: "hidden" }}>
-      {["20%", "35%", "50%", "65%"].map((top, i) => <div key={i} style={{ position: "absolute", top, left: 0, width: "100%", height: "40px", backgroundColor: "#636363", zIndex: 2 }} />)}
-      {["20%", "40%", "60%", "80%"].map((left, i) => <div key={i} style={{ position: "absolute", top: 0, left, width: "25px", height: "100%", backgroundColor: "#555", zIndex: 3 }} />)}
-      {["20%", "40%"].map((left, i) => <React.Fragment key={i}><TrafficLight top="10%" left={left} /><TrafficLight top="50%" left={left} /></React.Fragment>)}
+  <div style={{ width: "100%", height: "100%", backgroundColor: "#d3d3d3", borderRadius: "12px", position: "relative", overflow: "hidden" }}>
 
-      <div style={{ position: "absolute", top: "0%", left: "20%", width: "25px", height: "35%", backgroundColor: "#ffcc00", borderRadius: "4px", zIndex: 8, boxShadow: "0 0 8px #ffcc00" }} />
-      <div style={{ position: "absolute", top: "35%", left: "20%", width: "75%", height: "8px", backgroundColor: "#ffcc00", borderRadius: "4px", zIndex: 8, boxShadow: "0 0 8px #ffcc00" }} />
+    {["20%", "35%", "50%", "65%"].map((top, i) => (
+      <div key={i} style={{ position: "absolute", top, left: 0, width: "100%", height: "40px", backgroundColor: "#636363", zIndex: 2 }} />
+    ))}
 
-      <div style={{ position: "absolute", left: "20%", top: "0%", transform: "translate(-50%, -130%)", fontSize: "30px", zIndex: 9 }}>📍</div>
-      <div style={{ position: "absolute", left: "95%", top: "35%", transform: "translate(-50%, -130%)", fontSize: "36px", color: "#ffcc00", textShadow: "0 0 8px #ffcc00", zIndex: 10 }}>🏪</div>
-    </div>
-  );
+    {["20%", "40%", "60%", "80%"].map((left, i) => (
+      <div key={i} style={{ position: "absolute", top: 0, left, width: "25px", height: "100%", backgroundColor: "#555", zIndex: 3 }} />
+    ))}
+
+    {/* ✅ Updated TrafficLights (using verticalRoads like your first version) */}
+    {verticalRoads.map((left, i) => (
+      <React.Fragment key={i}>
+        <TrafficLight top="35%" left={left} />
+        <TrafficLight top="65%" left={left} />
+      </React.Fragment>
+    ))}
+
+    <div style={{ position: "absolute", top: "0%", left: "20%", width: "25px", height: "35%", backgroundColor: "#ffcc00", borderRadius: "4px", zIndex: 8, boxShadow: "0 0 8px #ffcc00" }} />
+    <div style={{ position: "absolute", top: "35%", left: "20%", width: "75%", height: "8px", backgroundColor: "#ffcc00", borderRadius: "4px", zIndex: 8, boxShadow: "0 0 8px #ffcc00" }} />
+
+    <div style={{ position: "absolute", left: "20%", top: "0%", transform: "translate(-50%, -130%)", fontSize: "30px", zIndex: 9 }}>📍</div>
+    <div style={{ position: "absolute", left: "95%", top: "35%", transform: "translate(-50%, -130%)", fontSize: "36px", color: "#ffcc00", textShadow: "0 0 8px #ffcc00", zIndex: 10 }}>🏪</div>
+
+  </div>
+);
+
 };
 
 export default Orders;

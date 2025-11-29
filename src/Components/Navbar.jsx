@@ -1,44 +1,35 @@
-// src/components/Navbar.jsx
 import React, { useState, useEffect, useContext } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from '../context/AuthContext';
 
 const Navbar = ({ darkMode, toggleMode }) => {
-  const { user } = useContext(AuthContext);
+  const { user, logout } = useContext(AuthContext);
+  const navigate = useNavigate();
   const [isAuth, setIsAuth] = useState(!!user);
   const [cartCount, setCartCount] = useState(0);
 
-  // FIXED: use user.id, same as Cart.jsx & Checkout.jsx
   const cartKey = user ? `cart_${user.id}` : "cart_guest";
 
-  // Load cart count on load
   useEffect(() => {
     const cart = JSON.parse(localStorage.getItem(cartKey) || "[]");
     setCartCount(cart.length);
   }, [cartKey]);
 
-  // Update auth state
-  useEffect(() => {
-    setIsAuth(!!user);
-  }, [user]);
+  useEffect(() => setIsAuth(!!user), [user]);
 
-  // Listen for cart changes (same tab + cross tab)
   useEffect(() => {
     const handler = () => {
       const cart = JSON.parse(localStorage.getItem(cartKey) || "[]");
       setCartCount(cart.length);
     };
-
     window.addEventListener("storage", handler);
     window.addEventListener("localStorageChanged", handler);
-
     return () => {
       window.removeEventListener("storage", handler);
       window.removeEventListener("localStorageChanged", handler);
     };
   }, [cartKey]);
 
-  // Persist dark mode on change
   useEffect(() => {
     localStorage.setItem("darkMode", JSON.stringify(darkMode));
   }, [darkMode]);
@@ -48,65 +39,65 @@ const Navbar = ({ darkMode, toggleMode }) => {
     justifyContent: "space-between",
     alignItems: "center",
     padding: "10px 30px",
-    backgroundColor: darkMode ? "#293129ff" : "#fff",
-    color: darkMode ? "#ff0000" : "#000",
-    boxShadow: darkMode ? "0 2px 5px rgba(247,66,66,1)" : "0 2px 5px rgba(78,78,78,1)",
-    position: "sticky",
+    backgroundColor: "#000",
+    color: "#ff0000",
+    boxShadow: "0 2px 10px rgba(255,0,0,0.5)",
+    position: "fixed",
     top: 0,
+    left: 0,
+    right: 0,
     zIndex: 1000,
-    height: "60px",
+    height: "70px",
+    borderBottom: "3px solid #b80000",
   };
 
   const linkStyles = {
-    color: darkMode ? "#ff0000" : "#000",
+    color: "#ff0000",
     textDecoration: "none",
-    fontSize: "16px",
-    padding: "5px 10px",
-    borderRadius: "6px",
-    transition: "all 0.3s ease",
+    fontSize: "18px",
+    fontWeight: "bold",
+    padding: "8px 16px",
+    borderRadius: "8px",
+    transition: "all 0.3s",
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
   };
 
   return (
     <nav style={navStyles}>
-      <div style={{ fontWeight: "bold", fontSize: "20px" }}>
-        <Link to="/" style={linkStyles}>NextGenPC</Link>
+      <div>
+        <Link to="/home" style={{...linkStyles, fontSize: "28px", color: "#ff0000"}}>NextGenPC</Link>
       </div>
 
-      <div style={{ display: "flex", gap: "20px", alignItems: "center" }}>
-        {[
-          "/home", "/products", "/cart", "/checkout", "/orders", "/profile",
-        ].map((path) => {
-          if (!isAuth && ["/cart", "/checkout", "/orders", "/profile"].includes(path)) return null;
+      <div style={{ display: "flex", gap: "25px", alignItems: "center" }}>
+        <Link to="/home" style={linkStyles}>Home</Link>
+        <Link to="/products" style={linkStyles}>Products</Link>
+        <Link to="/cart" style={linkStyles}>Cart ({cartCount})</Link>
+        <Link to="/checkout" style={linkStyles}>Checkout</Link>
+        <Link to="/orders" style={linkStyles}>Orders</Link>
+        <Link to="/profile" style={linkStyles}>Profile</Link>
 
-          const label =
-            path === "/home" ? "Home" :
-            path === "/products" ? "Products" :
-            path === "/cart" ? `Cart (${cartCount})` :
-            path === "/checkout" ? "Checkout" :
-            path === "/orders" ? "Orders" :
-            "Profile";
+        <button onClick={toggleMode} style={{background: "none", border: "none", fontSize: "24px", cursor: "pointer"}}>
+          {darkMode ? "Sun" : "Moon"}
+        </button>
 
-          return (
-            <Link key={path} to={path} style={linkStyles}>
-              {label}
-            </Link>
-          );
-        })}
-
-        <button
-          onClick={toggleMode}
-          style={{
-            padding: "5px 10px",
-            borderRadius: "6px",
+        {isAuth && (
+          <button onClick={handleLogout} style={{
+            backgroundColor: "#ff0000",
+            color: "#fff",
             border: "none",
+            padding: "10px 20px",
+            borderRadius: "8px",
             cursor: "pointer",
             fontWeight: "bold",
-            backgroundColor: darkMode ? "#000" : "#050000ff",
-            color: darkMode ? "#ff0000" : "#000",
-          }}
-        >
-          {darkMode ? "☀️" : "🌙"}
-        </button>
+            fontSize: "16px"
+          }}>
+            Logout
+          </button>
+        )}
       </div>
     </nav>
   );

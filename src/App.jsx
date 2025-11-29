@@ -15,124 +15,77 @@ import Home from './Components/Home';
 import Product from './Components/Product';
 import Cart from './Components/Cart';
 import Checkout from './Components/Checkout';
-import Orders from './Components/Order'; 
+import Orders from './Components/Order';
 import Profile from './Components/Profile';
 import Navbar from './Components/Navbar';
 
-// Protected Route
 const ProtectedRoute = ({ children }) => {
-  const isAuthenticated = !!localStorage.getItem('user'); 
+  const isAuthenticated = !!localStorage.getItem('user');
   return isAuthenticated ? children : <Navigate to="/login" replace />;
 };
 
-// Layout Wrapper
 const Layout = ({ children, darkMode, toggleMode }) => {
   const location = useLocation();
-  const hideNavbarPaths = ['/', '/login', '/signup'];
-  const showNavbar = !hideNavbarPaths.includes(location.pathname);
-
-  const darkModePages = ['/products', '/cart', '/checkout', '/orders', '/order', '/profile'];
-  const isDarkPage = darkMode && darkModePages.includes(location.pathname);
-
-  const bgColor = isDarkPage ? '#000000ab' : '#ffffffb0';
-  const textColor = isDarkPage ? '#b80000ff' : '#000';
+  const showNavbar = !['/', '/login', '/signup'].includes(location.pathname);
 
   return (
-    <div
-      style={{
-        backgroundColor: bgColor,
-        color: textColor,
-        minHeight: '100vh',
-        transition: 'all 0.3s ease',
-      }}
-    >
-      {showNavbar && <Navbar darkMode={darkMode} toggleMode={toggleMode} />}
-      <main>{children}</main>
+    <div style={{
+      margin: 0,
+      padding: 0,
+      minHeight: "100vh",
+      width: "100vw",
+      backgroundColor: "#000",
+      color: "#fff",
+      overflowX: "hidden",
+      position: "fixed",
+      top: 0, left: 0, right: 0, bottom: 0,
+    }}>
+      <div style={{ 
+        position: "relative", 
+        minHeight: "100vh",
+        width: "100%",
+        boxSizing: "border-box"
+      }}>
+        {showNavbar && <Navbar darkMode={darkMode} toggleMode={toggleMode} />}
+        <div style={{ paddingTop: showNavbar ? "80px" : "0", width: "100%" }}>
+          {children}
+        </div>
+      </div>
     </div>
   );
 };
 
-// 404 Page
-const NotFound = () => (
-  <div style={{ textAlign: 'center', padding: '100px 20px' }}>
-    <h1 style={{ fontSize: '48px', marginBottom: '16px' }}>404</h1>
-    <p>Page not found</p>
-    <a href="/home" style={{ color: '#b80000ff', textDecoration: 'underline' }}>
-      Go back home
-    </a>
-  </div>
-);
-
-// Main App
 function App() {
-  const [darkMode, setDarkMode] = useState(() => {
-    const saved = localStorage.getItem('darkMode');
-    if (saved !== null) return JSON.parse(saved);
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
-  });
+  const [darkMode] = useState(true);
 
-  const toggleMode = () => {
-    setDarkMode(prev => {
-      const newMode = !prev;
-      localStorage.setItem('darkMode', JSON.stringify(newMode));
-      return newMode;
-    });
-  };
+  useEffect(() => {
+    document.documentElement.style.margin = "0";
+    document.documentElement.style.padding = "0";
+    document.documentElement.style.backgroundColor = "#000";
+    document.body.style.margin = "0";
+    document.body.style.padding = "0";
+    document.body.style.backgroundColor = "#000";
+    document.body.style.width = "100vw";
+    document.body.style.height = "100vh";
+    document.body.style.overflowX = "hidden";
+  }, []);
 
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Layout darkMode={darkMode} toggleMode={toggleMode}>
+        <Layout darkMode={darkMode}>
           <Routes>
-            {/* Public */}
             <Route path="/" element={<Signup />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/login" element={<Login />} />
-
-            {/* Protected */}
-            <Route
-              path="/home"
-              element={
-                <ProtectedRoute>
-                  <Home />
-                </ProtectedRoute>
-              }
-            />
-
-            {/* Public pages */}
+            <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
             <Route path="/products" element={<Product darkMode={darkMode} />} />
             <Route path="/cart" element={<Cart darkMode={darkMode} />} />
             <Route path="/checkout" element={<Checkout darkMode={darkMode} />} />
-
-            {/* Orders */}
-            <Route
-              path="/orders"
-              element={
-                <ProtectedRoute>
-                  <Orders darkMode={darkMode} />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/order"
-              element={
-                <ProtectedRoute>
-                  <Orders darkMode={darkMode} />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/profile"
-              element={
-                <ProtectedRoute>
-                  <Profile darkMode={darkMode} />
-                </ProtectedRoute>
-              }
-            />
-
-            {/* 404 */}
-            <Route path="*" element={<NotFound />} />
+            <Route path="/orders" element={<ProtectedRoute><Orders darkMode={darkMode} /></ProtectedRoute>} />
+            <Route path="/order" element={<ProtectedRoute><Orders darkMode={darkMode} /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><Profile darkMode={darkMode} /></ProtectedRoute>} />
+            <Route path="*" element={<div style={{padding: "100px", textAlign: "center", color: "#fff"}}>404 - Not Found</div>} />
           </Routes>
         </Layout>
       </BrowserRouter>
