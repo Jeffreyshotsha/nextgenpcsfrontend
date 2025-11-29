@@ -81,7 +81,7 @@ const Navbar = ({ darkMode, toggleMode }) => {
         <Link to="/profile" style={linkStyles}>Profile</Link>
 
         <button onClick={toggleMode} style={{background: "none", border: "none", fontSize: "24px", cursor: "pointer"}}>
-          {darkMode ? "Sun" : "Moon"}
+          {darkMode ? "☀️" : "🌙"}
         </button>
 
         {isAuth && (
