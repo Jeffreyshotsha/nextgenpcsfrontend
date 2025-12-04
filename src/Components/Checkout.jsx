@@ -51,11 +51,12 @@ const Checkout = ({ darkMode }) => {
     margin: "20px auto",
   };
 
-  useEffect(() => {
-    const stored = JSON.parse(localStorage.getItem(cartKey) || "[]");
-    setCart(stored);
-    setLoading(false);
-  }, [cartKey]);
+useEffect(() => {
+  const stored = JSON.parse(localStorage.getItem(cartKey) || "[]") || [];
+  setCart(stored);
+  setLoading(false);
+}, [cartKey]);
+
 
   const saveCart = (newCart) => {
     if (user) localStorage.setItem(cartKey, JSON.stringify(newCart));

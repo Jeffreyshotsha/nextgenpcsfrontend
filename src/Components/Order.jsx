@@ -127,23 +127,25 @@ const Orders = ({ darkMode }) => {
               </div>
             </div>
 
-            {/* Items Grid */}
-            <div style={{ padding: "20px", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "20px" }}>
-              {order.items.map((item, i) => (
-                <div key={i} style={{ display: "flex", gap: "15px", background: darkMode ? "#222" : "#f9f9f9", padding: "15px", borderRadius: "12px" }}>
-                  <img src={item.image_url || item.image || "/no-image.png"} alt={item.model} style={{ width: "90px", height: "90px", objectFit: "cover", borderRadius: "10px" }} />
-                  <div>
-                    <strong style={{ color: theme.text }}>{item.brand}</strong>
-                    <p style={{ margin: "5px 0", color: theme.muted, fontSize: "14px" }}>{item.model}</p>
-                    <p style={{ fontWeight: "bold" }}>R {(item.price * (item.quantity || 1)).toFixed(2)}</p>
+            {/* Items Grid ONLY if NOT instalment */}
+            {order.paymentType !== "instalment" && order.items && Array.isArray(order.items) && (
+              <div style={{ padding: "20px", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "20px" }}>
+                {order.items.map((item, i) => (
+                  <div key={i} style={{ display: "flex", gap: "15px", background: darkMode ? "#222" : "#f9f9f9", padding: "15px", borderRadius: "12px" }}>
+                    <img src={item.image_url || item.image || "/no-image.png"} alt={item.model} style={{ width: "90px", height: "90px", objectFit: "cover", borderRadius: "10px" }} />
+                    <div>
+                      <strong style={{ color: theme.text }}>{item.brand}</strong>
+                      <p style={{ margin: "5px 0", color: theme.muted, fontSize: "14px" }}>{item.model}</p>
+                      <p style={{ fontWeight: "bold" }}>R {(item.price * (item.quantity || 1)).toFixed(2)}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
 
-            {/* Instalment Progress Bar */}
+            {/* Instalment Progress Bar Only */}
             {order.paymentType === "instalment" && order.instalment && (
-              <div style={{ padding: "0 20px 20px" }}>
+              <div style={{ padding: "20px" }}>
                 <div style={{ marginBottom: "10px", display: "flex", justifyContent: "space-between" }}>
                   <span style={{ fontWeight: "bold", color: theme.text }}>Instalment Progress</span>
                   <span style={{ color: theme.accent }}>
@@ -168,25 +170,27 @@ const Orders = ({ darkMode }) => {
               </div>
             )}
 
-            {/* Timer + Map */}
-            <div style={{ padding: "20px", background: darkMode ? "#0a0a0a" : "#f8f8f8" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
-                <span style={{ fontWeight: "bold", fontSize: "18px", color: theme.text }}>
-                  {order.delivery === "delivery" ? "On the way" : "Ready for pickup"}
-                </span>
-                <span style={{ fontSize: "28px", fontWeight: "bold", color: timers[order._id] <= 60 ? "#ff4757" : theme.accent }}>
-                  {formatTime(timers[order._id] || 0)}
-                </span>
-              </div>
+            {/* Timer + Map only if NOT instalment */}
+            {order.paymentType !== "instalment" && (
+              <div style={{ padding: "20px", background: darkMode ? "#0a0a0a" : "#f8f8f8" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
+                  <span style={{ fontWeight: "bold", fontSize: "18px", color: theme.text }}>
+                    {order.delivery === "delivery" ? "On the way" : "Ready for pickup"}
+                  </span>
+                  <span style={{ fontSize: "28px", fontWeight: "bold", color: timers[order._id] <= 60 ? "#ff4757" : theme.accent }}>
+                    {formatTime(timers[order._id] || 0)}
+                  </span>
+                </div>
 
-              <div style={{ height: "340px", borderRadius: "16px", overflow: "hidden", border: `3px solid ${theme.border}` }}>
-                {order.delivery === "delivery" ? (
-                  <DeliveryMap countdown={timers[order._id] || 0} />
-                ) : (
-                  <PickupMap />
-                )}
+                <div style={{ height: "340px", borderRadius: "16px", overflow: "hidden", border: `3px solid ${theme.border}` }}>
+                  {order.delivery === "delivery" ? (
+                    <DeliveryMap countdown={timers[order._id] || 0} />
+                  ) : (
+                    <PickupMap />
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         ))}
       </div>
@@ -204,10 +208,8 @@ const Orders = ({ darkMode }) => {
 // REAL MOVING CAR ON DELIVERY
 const DeliveryMap = ({ countdown }) => {
   const progress = Math.min(((600 - Math.max(countdown, 0)) / 600) * 100, 100);
-
   return (
     <div style={{ position: "relative", width: "100%", height: "100%", background: "#0f1629", overflow: "hidden" }}>
-      {/* Roads */}
       {["25%", "50%", "75%"].map(t => (
         <div key={t} style={{ position: "absolute", top: t, left: 0, width: "100%", height: "60px", background: "#1a2642", border: "2px dashed #2e3b55" }} />
       ))}
@@ -215,7 +217,6 @@ const DeliveryMap = ({ countdown }) => {
         <div key={l} style={{ position: "absolute", top: 0, left: l, width: "60px", height: "100%", background: "#1a2642", border: "2px dashed #2e3b55" }} />
       ))}
 
-      {/* Glowing Delivery Path */}
       <div style={{
         position: "absolute",
         top: "50%",
@@ -228,7 +229,6 @@ const DeliveryMap = ({ countdown }) => {
         opacity: 0.6,
       }} />
 
-      {/* MOVING VAN */}
       <div style={{
         position: "absolute",
         left: `${progress}%`,
@@ -252,7 +252,6 @@ const DeliveryMap = ({ countdown }) => {
 const PickupMap = () => {
   return (
     <div style={{ position: "relative", width: "100%", height: "100%", background: "#0a0e1a", overflow: "hidden" }}>
-      {/* Base roads */}
       {["30%", "70%"].map(t => (
         <div key={t} style={{ position: "absolute", top: t, left: 0, width: "100%", height: "80px", background: "#16213e" }} />
       ))}
@@ -260,7 +259,6 @@ const PickupMap = () => {
         <div key={l} style={{ position: "absolute", top: 0, left: l, width: "80px", height: "100%", background: "#16213e" }} />
       ))}
 
-      {/* GLOWING HIGHLIGHTED PATH */}
       <div style={{
         position: "absolute",
         top: "50%",
@@ -274,7 +272,6 @@ const PickupMap = () => {
         animation: "pulsePath 2.5s infinite",
       }} />
 
-      {/* Pulsing Store */}
       <div style={{
         position: "absolute",
         top: "50%",
