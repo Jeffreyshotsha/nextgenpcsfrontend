@@ -17,6 +17,8 @@ const Orders = ({ darkMode }) => {
   };
 
   // THIS IS THE ONLY LINE ADDED — FIXES THE CRASH
+const verticalRoads = ["20%", "30%", "40%", "50%", "60%", "70%", "80%"];
+
   const verticalRoads = ["20%", "30%", "40%", "50%", "60%", "70%", "80%"];
 
   useEffect(() => {
