@@ -239,7 +239,7 @@ const DeliveryMap = ({ countdown }) => {
         filter: "drop-shadow(0 0 30px #00ff9d)",
         zIndex: 10,
       }}>
-        Delivery Van
+        🎁
       </div>
 
       <div style={{ position: "absolute", left: "5%", top: "12%", color: "#00ff9d", fontSize: "22px", fontWeight: "bold" }}>🏪</div>
