@@ -1,4 +1,4 @@
-// src/Components/Profile.jsx  ← FINAL, FULLY UPDATED & WORKING
+// src/Components/Profile.jsx  ← UPDATED WITH PAYMENT MODAL, IMAGES & NOTIFICATIONS
 import React, { useContext, useEffect, useState } from "react";
 import { AuthContext } from "../context/AuthContext";
 import axios from "axios";
@@ -9,6 +9,11 @@ const Profile = ({ darkMode }) => {
   const [loading, setLoading] = useState(true);
   const [preview, setPreview] = useState(user?.profilePicture || "");
   const [uploading, setUploading] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentOrder, setPaymentOrder] = useState(null);
+  const [accountNumber, setAccountNumber] = useState("");
+  const [emailInput, setEmailInput] = useState("");
+  const [notifications, setNotifications] = useState([]);
 
   const API_URL = "https://nextgenpcsbackend.onrender.com";
 
@@ -40,6 +45,16 @@ const Profile = ({ darkMode }) => {
         const freshUser = userRes.data;
         setPreview(freshUser.profilePicture || "");
         login(freshUser);
+
+        // Generate notifications based on orders
+        const notes = [];
+        ordersRes.data.forEach((o) => {
+          if (o.status !== "completed") notes.push(`Order #${o._id.slice(-8)} is in progress`);
+          if (o.instalment && o.instalment.paid < o.total)
+            notes.push(`Order #${o._id.slice(-8)} has an instalment pending: R${(o.total - o.instalment.paid).toFixed(2)} remaining`);
+          if (o.status === "completed" && !o.instalment) notes.push(`Order #${o._id.slice(-8)} is ready for pickup at 72 Marlborough Road, Springfield Glenesk`);
+        });
+        setNotifications(notes);
       } catch (err) {
         console.error("Load error:", err);
       } finally {
@@ -129,39 +144,51 @@ const Profile = ({ darkMode }) => {
       setOrders((prev) =>
         prev.map((o) => (o._id === orderId ? { ...o, status: "completed" } : o))
       );
+      alert(`Order #${orderId.slice(-8)} marked as received.`);
     } catch (err) {
       alert("Failed to mark as received");
     }
   };
 
-  const payInstalment = async (orderId) => {
-    const order = orders.find(o => o._id === orderId);
-    if (!order?.instalment) return;
+  const openPaymentModal = (order) => {
+    setPaymentOrder(order);
+    setEmailInput(user.email);
+    setAccountNumber("");
+    setShowPaymentModal(true);
+  };
 
-    const monthly = order.instalment.monthlyAmount;
-    const remaining = order.total - order.instalment.paid;
-
-    if (order.instalment.paid >= order.total) {
-      alert("This order is already fully paid!");
+  const handlePayment = async () => {
+    if (!emailInput || !accountNumber) {
+      alert("Please fill in all fields");
       return;
     }
-
-    if (!confirm(`Pay your next instalment of R${monthly.toFixed(2)} now?`)) return;
-
     try {
       const token = localStorage.getItem("token");
       const res = await axios.post(
-        `${API_URL}/orders/${orderId}/complete-instalment`,
+        `${API_URL}/orders/${paymentOrder._id}/complete-instalment`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      // Update with fresh data from backend
-      setOrders(prev => prev.map(o =>
-        o._id === orderId ? res.data.order || o : o
-      ));
+      // Update order
+      setOrders((prev) =>
+        prev.map((o) =>
+          o._id === paymentOrder._id ? res.data.order || o : o
+        )
+      );
 
-      alert("Instalment paid successfully!");
+      const orderPaid = res.data.order;
+      const total = orderPaid.total;
+      const paid = orderPaid.instalment?.paid || total;
+      const remaining = Math.max(total - paid, 0);
+
+      if (remaining > 0) {
+        alert(`Payment successful! R${paid.toFixed(2)} paid. R${remaining.toFixed(2)} remaining.`);
+      } else {
+        alert(`Congratulations! You have fully paid your order. You can now pick it up at 72 Marlborough Road, Springfield Glenesk.`);
+      }
+
+      setShowPaymentModal(false);
     } catch (err) {
       console.error(err);
       alert(err.response?.data?.message || "Payment failed. Please try again.");
@@ -267,6 +294,18 @@ const Profile = ({ darkMode }) => {
           </label>
         </div>
 
+        {/* NOTIFICATIONS */}
+        {notifications.length > 0 && (
+          <div style={{ background: darkMode ? "#222" : "#f9f9f9", padding: "20px", borderRadius: "12px", marginBottom: "30px" }}>
+            <h3>Notifications</h3>
+            <ul>
+              {notifications.map((n, idx) => (
+                <li key={idx} style={{ marginBottom: "6px", color: darkMode ? "#ccc" : "#333" }}>{n}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {/* ORDERS */}
         <div
           style={{
@@ -329,6 +368,7 @@ const Profile = ({ darkMode }) => {
                         style={{
                           display: "flex",
                           justifyContent: "space-between",
+                          alignItems: "center",
                           margin: "8px 0",
                         }}
                       >
@@ -336,9 +376,14 @@ const Profile = ({ darkMode }) => {
                           {item.quantity || 1} × {item.brand}{" "}
                           {item.model || item.product_name}
                         </span>
-                        <span>
-                          R{(item.price * (item.quantity || 1)).toFixed(2)}
-                        </span>
+                        <span>R{(item.price * (item.quantity || 1)).toFixed(2)}</span>
+                        {item.image && (
+                          <img
+                            src={item.image}
+                            alt={item.model || item.product_name}
+                            style={{ width: "60px", height: "60px", objectFit: "cover", borderRadius: "6px" }}
+                          />
+                        )}
                       </div>
                     ))}
                     <div
@@ -353,7 +398,7 @@ const Profile = ({ darkMode }) => {
                     </div>
                   </div>
 
-                  {/* UPDATED INSTALMENT SECTION */}
+                  {/* INSTALMENT */}
                   {instalment && (
                     <div style={{ margin: "20px 0", padding: "15px", background: darkMode ? "#222" : "#f9f9f9", borderRadius: "12px" }}>
                       <p style={{ margin: "0 0 10px", fontSize: "18px" }}>
@@ -394,7 +439,7 @@ const Profile = ({ darkMode }) => {
 
                       {instalment.paid < total && (
                         <button
-                          onClick={() => payInstalment(order._id)}
+                          onClick={() => openPaymentModal(order)}
                           style={{
                             ...btn,
                             backgroundColor: "#4caf50",
@@ -455,6 +500,53 @@ const Profile = ({ darkMode }) => {
           )}
         </div>
       </div>
+
+      {/* PAYMENT MODAL */}
+      {showPaymentModal && paymentOrder && (
+        <div style={{
+          position: "fixed",
+          top: 0, left: 0,
+          width: "100%", height: "100%",
+          backgroundColor: "rgba(0,0,0,0.7)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: darkMode ? "#222" : "#fff",
+            padding: "30px",
+            borderRadius: "12px",
+            width: "400px",
+            boxShadow: "0 0 15px rgba(0,0,0,0.5)"
+          }}>
+            <h3>Pay Instalment</h3>
+            <p>Amount: <strong>R{paymentOrder.instalment.monthlyAmount.toFixed(2)}</strong></p>
+            <div style={{ marginBottom: "10px" }}>
+              <label>Email:</label>
+              <input
+                type="email"
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
+                style={{ width: "100%", padding: "8px", marginTop: "4px" }}
+              />
+            </div>
+            <div style={{ marginBottom: "10px" }}>
+              <label>Account Number:</label>
+              <input
+                type="text"
+                value={accountNumber}
+                onChange={(e) => setAccountNumber(e.target.value)}
+                style={{ width: "100%", padding: "8px", marginTop: "4px" }}
+              />
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+              <button onClick={() => setShowPaymentModal(false)} style={{ ...btn, backgroundColor: "#888" }}>Cancel</button>
+              <button onClick={handlePayment} style={{ ...btn, backgroundColor: "#4caf50" }}>Confirm Payment</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
