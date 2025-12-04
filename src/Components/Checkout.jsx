@@ -1,5 +1,4 @@
 // src/Components/Checkout.jsx
-// YOUR ORIGINAL FILE – ONLY 3 TINY FIXES ADDED FOR INSTALMENTS
 import React, { useContext, useEffect, useState } from "react";
 import { AuthContext } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -93,7 +92,7 @@ const Checkout = ({ darkMode }) => {
       : null;
 
   const handlePurchase = async () => {
-    // === YOUR ORIGINAL VALIDATION – 100% UNCHANGED ===
+    // === ORIGINAL VALIDATION ===
     if (paymentType === "card") {
       if (
         !cardInfo.number ||
@@ -130,7 +129,7 @@ const Checkout = ({ darkMode }) => {
       return;
     }
 
-    // === ONLY THESE 3 FIXES BELOW (the rest is YOUR original code) ===
+    // === ORDER POSTING ===
     if (user && cart.length > 0) {
       try {
         const orderData = {
@@ -163,7 +162,7 @@ const Checkout = ({ darkMode }) => {
       }
     }
 
-    // === YOUR ORIGINAL SUCCESS CODE – 100% UNCHANGED ===
+    // === CLEAR FORMS ===
     setCart([]);
     setCardInfo({ number: "", expiry: "", cvv: "" });
     setEftInfo({ bank: "", accountNumber: "", holder: "" });
@@ -184,7 +183,6 @@ const Checkout = ({ darkMode }) => {
     );
   }
 
-  // === YOUR ENTIRE ORIGINAL UI – 100% UNTOUCHED ===
   return (
     <div style={{ backgroundColor: theme.bg, minHeight: "100vh", padding: "30px", display: "flex", justifyContent: "center" }}>
       <div style={{ width: "100%", maxWidth: "1000px", color: theme.text }}>
@@ -196,18 +194,26 @@ const Checkout = ({ darkMode }) => {
             alignItems: "center", justifyContent: "center", color: "#fff", zIndex: 9999,
             animation: "fadeIn 0.5s",
           }}>
-            <h1 style={{ fontSize: "48px", marginBottom: "20px" }}>Purchase Complete!</h1>
-            <p style={{ fontSize: "20px", marginBottom: "40px" }}>Thank you for your order.</p>
+            <h1 style={{ fontSize: "48px", marginBottom: "20px" }}>
+              {paymentType === "instalment"
+                ? "First instalment payment successful!"
+                : "Purchase Complete!"}
+            </h1>
+            <p style={{ fontSize: "20px", marginBottom: "40px" }}>
+              {paymentType === "instalment"
+                ? "Thank you! Your first payment was processed. You can check your orders."
+                : "Thank you for your order."}
+            </p>
             <div style={{
               width: "80px", height: "80px", border: "5px solid #fff",
               borderTop: "5px solid #00C853", borderRadius: "50%",
               animation: "spin 1s linear infinite", marginBottom: "40px",
             }}></div>
-            <button onClick={() => navigate("/products")} style={{
+            <button onClick={() => paymentType === "instalment" ? navigate("/orders") : navigate("/products")} style={{
               padding: "12px 25px", fontSize: "18px", borderRadius: "8px",
               border: "none", backgroundColor: "#00C853", color: "#fff", cursor: "pointer",
             }}>
-              Continue Shopping
+              {paymentType === "instalment" ? "Go to Orders" : "Continue Shopping"}
             </button>
           </div>
         )}
@@ -253,7 +259,7 @@ const Checkout = ({ darkMode }) => {
               </select>
             </div>
 
-            {/* PAYMENT METHOD + ALL YOUR ORIGINAL FORMS */}
+            {/* PAYMENT METHOD */}
             <div style={containerStyle}>
               <label style={{ fontWeight: "bold" }}>Payment Method:</label>
               <div style={{ marginTop: "10px" }}>
@@ -262,7 +268,7 @@ const Checkout = ({ darkMode }) => {
                 <label><input type="radio" value="eft" checked={paymentType === "eft"} onChange={() => setPaymentType("eft")} /> EFT</label>
               </div>
 
-              {/* INSTALMENT FORM – 100% YOURS */}
+              {/* INSTALMENT FORM */}
               {paymentType === "instalment" && (
                 <div style={{ marginTop: "15px" }}>
                   <label>Months:</label>
@@ -282,7 +288,7 @@ const Checkout = ({ darkMode }) => {
                 </div>
               )}
 
-              {/* CARD FORM – 100% YOURS */}
+              {/* CARD FORM */}
               {paymentType === "card" && (
                 <div style={{ marginTop: "15px" }}>
                   <label>Card Number:</label><input type="text" value={cardInfo.number} maxLength={19} onChange={(e) => setCardInfo({ ...cardInfo, number: e.target.value })} required style={inputStyle(theme)} />
@@ -291,7 +297,7 @@ const Checkout = ({ darkMode }) => {
                 </div>
               )}
 
-              {/* EFT FORM – 100% YOURS */}
+              {/* EFT FORM */}
               {paymentType === "eft" && (
                 <div style={{ marginTop: "15px" }}>
                   <label>Bank Name:</label><input type="text" value={eftInfo.bank} onChange={(e) => setEftInfo({ ...eftInfo, bank: e.target.value })} required style={inputStyle(theme)} />
@@ -340,7 +346,7 @@ const Checkout = ({ darkMode }) => {
   );
 };
 
-// YOUR ORIGINAL STYLES & ANIMATIONS
+// STYLES & ANIMATIONS
 const qtyBtn = (theme) => ({
   padding: "6px 12px", backgroundColor: theme.buttonBg, color: theme.buttonText,
   borderRadius: "6px", cursor: "pointer", border: "none", fontWeight: "bold",
