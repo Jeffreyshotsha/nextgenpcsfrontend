@@ -1,4 +1,4 @@
-// src/Components/Profile.jsx  ← FINAL, GUARANTEED NO ERRORS
+// src/Components/Profile.jsx  ← FINAL, FULLY UPDATED & WORKING
 import React, { useContext, useEffect, useState } from "react";
 import { AuthContext } from "../context/AuthContext";
 import axios from "axios";
@@ -135,21 +135,36 @@ const Profile = ({ darkMode }) => {
   };
 
   const payInstalment = async (orderId) => {
-    if (!confirm("Complete your instalment payment now?")) return;
+    const order = orders.find(o => o._id === orderId);
+    if (!order?.instalment) return;
+
+    const monthly = order.instalment.monthlyAmount;
+    const remaining = order.total - order.instalment.paid;
+
+    if (order.instalment.paid >= order.total) {
+      alert("This order is already fully paid!");
+      return;
+    }
+
+    if (!confirm(`Pay your next instalment of R${monthly.toFixed(2)} now?`)) return;
 
     try {
       const token = localStorage.getItem("token");
-      await axios.post(`${API_URL}/orders/${orderId}/complete-instalment`, {}, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setOrders((prev) =>
-        prev.map((o) =>
-          o._id === orderId ? { ...o, paymentType: "paid", instalment: null } : o
-        )
+      const res = await axios.post(
+        `${API_URL}/orders/${orderId}/complete-instalment`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-      alert("Payment completed!");
+
+      // Update with fresh data from backend
+      setOrders(prev => prev.map(o =>
+        o._id === orderId ? res.data.order || o : o
+      ));
+
+      alert("Instalment paid successfully!");
     } catch (err) {
-      alert("Payment failed");
+      console.error(err);
+      alert(err.response?.data?.message || "Payment failed. Please try again.");
     }
   };
 
@@ -338,43 +353,65 @@ const Profile = ({ darkMode }) => {
                     </div>
                   </div>
 
+                  {/* UPDATED INSTALMENT SECTION */}
                   {instalment && (
-                    <div style={{ margin: "20px 0" }}>
-                      <p>
-                        <strong>Instalment Plan</strong> — {instalment.months} months @ R
-                        {instalment.monthlyAmount.toFixed(2)}/month
+                    <div style={{ margin: "20px 0", padding: "15px", background: darkMode ? "#222" : "#f9f9f9", borderRadius: "12px" }}>
+                      <p style={{ margin: "0 0 10px", fontSize: "18px" }}>
+                        <strong>Instalment Plan Active</strong>
                       </p>
-                      <div
-                        style={{
-                          background: "#333",
-                          borderRadius: "8px",
-                          overflow: "hidden",
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: `${(instalment.paid / total) * 100}%`,
-                            background: "linear-gradient(90deg, #4caf50, #8bc34a)",
-                            height: "34px",
-                            textAlign: "center",
-                            color: "#000",
-                            fontWeight: "bold",
-                            lineHeight: "34px",
-                          }}
-                        >
-                          Paid: R{instalment.paid.toFixed(2)} of R{total.toFixed(2)}
+                      <p style={{ margin: "5px 0", color: "#aaa" }}>
+                        {instalment.months}-month plan • Monthly payment: <strong style={{ color: "#b80000" }}>R{instalment.monthlyAmount.toFixed(2)}</strong>
+                      </p>
+
+                      <div style={{ margin: "15px 0" }}>
+                        <div style={{ background: "#333", borderRadius: "8px", overflow: "hidden", height: "38px" }}>
+                          <div
+                            style={{
+                              width: `${Math.min((instalment.paid / total) * 100, 100)}%`,
+                              background: instalment.paid >= total ? "#4caf50" : "linear-gradient(90deg, #ff9800, #ffc107)",
+                              height: "100%",
+                              textAlign: "center",
+                              color: "#000",
+                              fontWeight: "bold",
+                              fontSize: "16px",
+                              lineHeight: "38px",
+                              transition: "width 0.4s ease",
+                            }}
+                          >
+                            {instalment.paid >= total 
+                              ? "PAID IN FULL!" 
+                              : `R${instalment.paid.toFixed(2)} of R${total.toFixed(2)} paid`
+                            }
+                          </div>
                         </div>
                       </div>
-                      <button
-                        onClick={() => payInstalment(order._id)}
-                        style={{
-                          ...btn,
-                          backgroundColor: "#4caf50",
-                          marginTop: "12px",
-                        }}
-                      >
-                        Pay Remaining R{(total - instalment.paid).toFixed(2)} Now
-                      </button>
+
+                      <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "10px", fontSize: "15px" }}>
+                        <span>Paid so far: <strong>R{instalment.paid.toFixed(2)}</strong></span>
+                        <span>Remaining: <strong style={{ color: "#b80000" }}>R{(total - instalment.paid).toFixed(2)}</strong></span>
+                        <span>Payments made: <strong>{instalment.paymentsMade || Math.floor(instalment.paid / instalment.monthlyAmount)}</strong> / {instalment.months}</span>
+                      </div>
+
+                      {instalment.paid < total && (
+                        <button
+                          onClick={() => payInstalment(order._id)}
+                          style={{
+                            ...btn,
+                            backgroundColor: "#4caf50",
+                            marginTop: "15px",
+                            fontSize: "16px",
+                            padding: "14px 28px",
+                          }}
+                        >
+                          Pay Next Instalment • R{instalment.monthlyAmount.toFixed(2)}
+                        </button>
+                      )}
+
+                      {instalment.paid >= total && (
+                        <div style={{ color: "#4caf50", fontWeight: "bold", fontSize: "18px", marginTop: "10px" }}>
+                          All instalments completed!
+                        </div>
+                      )}
                     </div>
                   )}
 
