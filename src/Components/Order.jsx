@@ -1,4 +1,4 @@
-// src/Components/Order.jsx
+// src/Components/Orders.jsx
 import React, { useEffect, useState, useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 import axios from "axios";
@@ -31,9 +31,10 @@ const Orders = ({ darkMode }) => {
       if (user) {
         try {
           const token = localStorage.getItem("token");
-          const res = await axios.get("https://nextgenpcsbackend.onrender.com/orders", {
-            headers: { Authorization: `Bearer ${token}` },
-          });
+          const res = await axios.get(
+            "https://nextgenpcsbackend.onrender.com/orders",
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
           fetched = res.data;
         } catch (err) {
           console.error("Failed to fetch orders:", err);
@@ -41,31 +42,35 @@ const Orders = ({ darkMode }) => {
       } else {
         const guestCart = JSON.parse(localStorage.getItem("cart_guest") || "[]");
         if (guestCart.length > 0) {
-          fetched = [{
-            _id: "guest_001",
-            items: guestCart,
-            delivery: "pickup",
-            paymentType: "full",
-            totalAmount: guestCart.reduce((a, i) => a + i.price * i.quantity, 0),
-            createdAt: Date.now()
-          }];
+          fetched = [
+            {
+              _id: "guest_001",
+              items: guestCart,
+              delivery: "pickup",
+              paymentType: "full",
+              totalAmount: guestCart.reduce((a, i) => a + i.price * i.quantity, 0),
+              createdAt: Date.now(),
+            },
+          ];
         }
       }
 
       setOrders(fetched);
 
       const initTimers = {};
-      fetched.forEach(order => {
-        const duration = order.delivery === "delivery" ? 600 : 120;
-        const key = `timer_start_${order._id}`;
-        const saved = localStorage.getItem(key);
+      fetched.forEach((order) => {
+        if (order.paymentType !== "instalment") {
+          const duration = order.delivery === "delivery" ? 600 : 120;
+          const key = `timer_start_${order._id}`;
+          const saved = localStorage.getItem(key);
 
-        if (!saved) {
-          localStorage.setItem(key, Date.now());
-          initTimers[order._id] = duration;
-        } else {
-          const elapsed = Math.floor((Date.now() - Number(saved)) / 1000);
-          initTimers[order._id] = Math.max(duration - elapsed, 0);
+          if (!saved) {
+            localStorage.setItem(key, Date.now());
+            initTimers[order._id] = duration;
+          } else {
+            const elapsed = Math.floor((Date.now() - Number(saved)) / 1000);
+            initTimers[order._id] = Math.max(duration - elapsed, 0);
+          }
         }
       });
       setTimers(initTimers);
@@ -78,19 +83,21 @@ const Orders = ({ darkMode }) => {
   // Countdown + email trigger
   useEffect(() => {
     const interval = setInterval(() => {
-      setTimers(prev => {
+      setTimers((prev) => {
         const updated = { ...prev };
-        Object.keys(updated).forEach(id => {
+        Object.keys(updated).forEach((id) => {
           if (updated[id] > 0) {
             updated[id] -= 1;
             if (updated[id] === 0 && prev[id] === 1) {
-              const order = orders.find(o => o._id === id);
+              const order = orders.find((o) => o._id === id);
               if (order && user) {
-                axios.post("https://nextgenpcsbackend.onrender.com/send-order-email", {
-                  userEmail: user.email,
-                  orderId: id,
-                  delivery: order.delivery,
-                }).catch(console.error);
+                axios
+                  .post("https://nextgenpcsbackend.onrender.com/send-order-email", {
+                    userEmail: user.email,
+                    orderId: id,
+                    delivery: order.delivery,
+                  })
+                  .catch(console.error);
               }
             }
           }
@@ -101,24 +108,53 @@ const Orders = ({ darkMode }) => {
     return () => clearInterval(interval);
   }, [orders, user]);
 
-  if (loading) return <div style={{ textAlign: "center", padding: "80px", color: theme.text }}>Loading orders...</div>;
-  if (orders.length === 0) return <div style={{ textAlign: "center", padding: "100px", color: theme.text }}>No orders yet</div>;
+  if (loading)
+    return (
+      <div style={{ textAlign: "center", padding: "80px", color: theme.text }}>
+        Loading orders...
+      </div>
+    );
+  if (orders.length === 0)
+    return (
+      <div style={{ textAlign: "center", padding: "100px", color: theme.text }}>
+        No orders yet
+      </div>
+    );
 
   return (
     <div style={{ backgroundColor: theme.bg, minHeight: "100vh", padding: "30px 15px" }}>
-      <h1 style={{ textAlign: "center", marginBottom: "40px", fontSize: "36px", color: theme.text }}>Your Orders</h1>
+      <h1 style={{ textAlign: "center", marginBottom: "40px", fontSize: "36px", color: theme.text }}>
+        Your Orders
+      </h1>
 
-      <div style={{ maxWidth: "1100px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "35px" }}>
-        {orders.map(order => (
-          <div key={order._id} style={{
-            backgroundColor: theme.card,
-            borderRadius: "20px",
-            overflow: "hidden",
-            boxShadow: "0 15px 40px rgba(0,0,0,0.3)",
-            border: `2px solid ${theme.border}`
-          }}>
+      <div
+        style={{
+          maxWidth: "1100px",
+          margin: "0 auto",
+          display: "flex",
+          flexDirection: "column",
+          gap: "35px",
+        }}
+      >
+        {orders.map((order) => (
+          <div
+            key={order._id}
+            style={{
+              backgroundColor: theme.card,
+              borderRadius: "20px",
+              overflow: "hidden",
+              boxShadow: "0 15px 40px rgba(0,0,0,0.3)",
+              border: `2px solid ${theme.border}`,
+            }}
+          >
             {/* Header */}
-            <div style={{ padding: "20px", background: darkMode ? "#000" : "#f1f1f1", borderBottom: `1px solid ${theme.border}` }}>
+            <div
+              style={{
+                padding: "20px",
+                background: darkMode ? "#000" : "#f1f1f1",
+                borderBottom: `1px solid ${theme.border}`,
+              }}
+            >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <h3 style={{ margin: 0, color: theme.text }}>Order #{order._id.slice(-8)}</h3>
                 <span style={{ color: theme.muted }}>
@@ -127,21 +163,39 @@ const Orders = ({ darkMode }) => {
               </div>
             </div>
 
-            {/* Items Grid only for non-instalment */}
-            {order.paymentType !== "instalment" && order.items?.length > 0 && (
-              <div style={{ padding: "20px", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "20px" }}>
-                {order.items.map((item, i) => (
-                  <div key={i} style={{ display: "flex", gap: "15px", background: darkMode ? "#222" : "#f9f9f9", padding: "15px", borderRadius: "12px" }}>
-                    <img src={item.image_url || item.image || "/no-image.png"} alt={item.model} style={{ width: "90px", height: "90px", objectFit: "cover", borderRadius: "10px" }} />
-                    <div>
-                      <strong style={{ color: theme.text }}>{item.brand}</strong>
-                      <p style={{ margin: "5px 0", color: theme.muted, fontSize: "14px" }}>{item.model}</p>
-                      <p style={{ fontWeight: "bold" }}>R {(item.price * (item.quantity || 1)).toFixed(2)}</p>
-                    </div>
+            {/* Items Grid */}
+            <div
+              style={{
+                padding: "20px",
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+                gap: "20px",
+              }}
+            >
+              {order.items?.map((item, i) => (
+                <div
+                  key={i}
+                  style={{
+                    display: "flex",
+                    gap: "15px",
+                    background: darkMode ? "#222" : "#f9f9f9",
+                    padding: "15px",
+                    borderRadius: "12px",
+                  }}
+                >
+                  <img
+                    src={item.image_url || item.image || "/no-image.png"}
+                    alt={item.model}
+                    style={{ width: "90px", height: "90px", objectFit: "cover", borderRadius: "10px" }}
+                  />
+                  <div>
+                    <strong style={{ color: theme.text }}>{item.brand}</strong>
+                    <p style={{ margin: "5px 0", color: theme.muted, fontSize: "14px" }}>{item.model}</p>
+                    <p style={{ fontWeight: "bold" }}>R {(item.price * (item.quantity || 1)).toFixed(2)}</p>
                   </div>
-                ))}
-              </div>
-            )}
+                </div>
+              ))}
+            </div>
 
             {/* Instalment Progress Bar Only */}
             {order.paymentType === "instalment" && order.instalment && (
@@ -152,15 +206,37 @@ const Orders = ({ darkMode }) => {
                     R{order.instalment.paid?.toFixed(2)} / R{order.totalAmount?.toFixed(2)}
                   </span>
                 </div>
-                <div style={{ height: "20px", background: darkMode ? "#333" : "#ddd", borderRadius: "10px", overflow: "hidden", position: "relative" }}>
-                  <div style={{
-                    width: `${(order.instalment.paid / order.totalAmount) * 100}%`,
-                    height: "100%",
-                    background: "linear-gradient(90deg, #00ff9d, #00cc7a)",
+                <div
+                  style={{
+                    height: "20px",
+                    background: darkMode ? "#333" : "#ddd",
                     borderRadius: "10px",
-                    transition: "width 1.5s cubic-bezier(0.4, 0, 0.2, 1)",
-                    boxShadow: "0 0 20px #00ff9d88",
-                  }} />
+                    overflow: "hidden",
+                    position: "relative",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${(order.instalment.paid / order.totalAmount) * 100}%`,
+                      height: "100%",
+                      background: "linear-gradient(90deg, #00ff9d, #00cc7a)",
+                      borderRadius: "10px",
+                      transition: "width 1.5s cubic-bezier(0.4, 0, 0.2, 1)",
+                      boxShadow: "0 0 20px #00ff9d88",
+                    }}
+                  />
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      height: "100%",
+                      background:
+                        "repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.1) 10px, rgba(255,255,255,0.1) 20px)",
+                      animation: "shimmer 3s linear infinite",
+                    }}
+                  />
                 </div>
               </div>
             )}
@@ -168,16 +244,31 @@ const Orders = ({ darkMode }) => {
             {/* Timer + Map only if NOT instalment */}
             {order.paymentType !== "instalment" && (
               <div style={{ padding: "20px", background: darkMode ? "#0a0a0a" : "#f8f8f8" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: "15px",
+                  }}
+                >
                   <span style={{ fontWeight: "bold", fontSize: "18px", color: theme.text }}>
                     {order.delivery === "delivery" ? "On the way" : "Ready for pickup"}
                   </span>
-                  <span style={{ fontSize: "28px", fontWeight: "bold", color: timers[order._id] <= 60 ? "#ff4757" : theme.accent }}>
+                  <span
+                    style={{
+                      fontSize: "28px",
+                      fontWeight: "bold",
+                      color: timers[order._id] <= 60 ? "#ff4757" : theme.accent,
+                    }}
+                  >
                     {formatTime(timers[order._id] || 0)}
                   </span>
                 </div>
 
-                <div style={{ height: "340px", borderRadius: "16px", overflow: "hidden", border: `3px solid ${theme.border}` }}>
+                <div
+                  style={{ height: "340px", borderRadius: "16px", overflow: "hidden", border: `3px solid ${theme.border}` }}
+                >
                   {order.delivery === "delivery" ? <DeliveryMap countdown={timers[order._id] || 0} /> : <PickupMap />}
                 </div>
               </div>
@@ -185,17 +276,58 @@ const Orders = ({ darkMode }) => {
           </div>
         ))}
       </div>
+
+      <style jsx>{`
+        @keyframes shimmer {
+          0% {
+            transform: translateX(-100%);
+          }
+          100% {
+            transform: translateX(100%);
+          }
+        }
+      `}</style>
     </div>
   );
 };
 
-// DELIVERY & PICKUP MAP COMPONENTS (same as your previous code)
+// REAL MOVING CAR ON DELIVERY
 const DeliveryMap = ({ countdown }) => {
   const progress = Math.min(((600 - Math.max(countdown, 0)) / 600) * 100, 100);
-  return <div>{/* ...existing animation code... */}</div>;
+  return (
+    <div style={{ position: "relative", width: "100%", height: "100%", background: "#0f1629", overflow: "hidden" }}>
+      {["25%", "50%", "75%"].map((t) => (
+        <div key={t} style={{ position: "absolute", top: t, left: 0, width: "100%", height: "60px", background: "#1a2642", border: "2px dashed #2e3b55" }} />
+      ))}
+      {["20%", "40%", "60%", "80%"].map((l) => (
+        <div key={l} style={{ position: "absolute", top: 0, left: l, width: "60px", height: "100%", background: "#1a2642", border: "2px dashed #2e3b55" }} />
+      ))}
+
+      <div
+        style={{
+          position: "absolute",
+          top: "50%",
+          left: `${progress}%`,
+          transform: "translate(-50%, -50%)",
+          fontSize: "60px",
+          filter: "drop-shadow(0 0 30px #00ff9d)",
+          zIndex: 10,
+          transition: "left 0.9s cubic-bezier(0.2, 0.8, 0.4, 1)",
+        }}
+      >
+        🎁
+      </div>
+    </div>
+  );
 };
-const PickupMap = () => {
-  return <div>{/* ...existing animation code... */}</div>;
-};
+
+// GLOWING PATH TO STORE ON PICKUP
+const PickupMap = () => (
+  <div style={{ position: "relative", width: "100%", height: "100%", background: "#0a0e1a", overflow: "hidden" }}>
+    <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", fontSize: "40px", fontWeight: "bold", color: "#00ff9d" }}>
+      🏪
+    </div>
+  </div>
+);
 
 export default Orders;
