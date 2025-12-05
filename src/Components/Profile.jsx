@@ -1,4 +1,4 @@
-// src/Components/Profile.jsx  ← FINAL, FULLY UPDATED & WORKING
+// src/Components/Profile.jsx  ← FINAL FIXED VERSION
 import React, { useContext, useEffect, useState } from "react";
 import { AuthContext } from "../context/AuthContext";
 import axios from "axios";
@@ -46,7 +46,12 @@ const Profile = ({ darkMode }) => {
 
         const ordersData = ordersRes.data.map((o) => ({
           ...o,
-          totalAmount: o.totalAmount || o.items.reduce((sum, i) => sum + i.price * (i.quantity || 1), 0) + (o.delivery === "delivery" ? 75 : 0)
+          totalAmount:
+            o.totalAmount ||
+            o.items.reduce(
+              (sum, i) => sum + i.price * (i.quantity || 1),
+              0
+            ) + (o.delivery === "delivery" ? 75 : 0),
         }));
 
         setOrders(ordersData);
@@ -77,29 +82,49 @@ const Profile = ({ darkMode }) => {
           });
         }
       });
+
       if (o.status === "pending") {
-        notifs.push({ message: `Order #${o._id.slice(-8)} is pending`, image: o.items[0]?.image || o.items[0]?.productImage || "" });
+        notifs.push({
+          message: `Order #${o._id.slice(-8)} is pending`,
+          image: o.items[0]?.image || o.items[0]?.productImage || "",
+        });
       }
+
       if (o.status === "completed") {
-        notifs.push({ message: `Order #${o._id.slice(-8)} completed`, image: o.items[0]?.image || o.items[0]?.productImage || "" });
+        notifs.push({
+          message: `Order #${o._id.slice(-8)} completed`,
+          image: o.items[0]?.image || o.items[0]?.productImage || "",
+        });
       }
+
       if (o.instalment) {
         if (o.instalment.paid < o.totalAmount) {
           notifs.push({
-            message: `Instalment payment for Order #${o._id.slice(-8)}: R${o.instalment.paid.toFixed(2)} paid of R${o.totalAmount.toFixed(2)}`,
-            image: o.items[0]?.image || o.items[0]?.productImage || ""
+            message: `Instalment payment for Order #${o._id.slice(
+              -8
+            )}: R${o.instalment.paid.toFixed(
+              2
+            )} paid of R${o.totalAmount.toFixed(2)}`,
+            image: o.items[0]?.image || o.items[0]?.productImage || "",
           });
         } else if (o.instalment.paid >= o.totalAmount) {
           notifs.push({
-            message: `All instalments for Order #${o._id.slice(-8)} completed! Ready for pickup at 72 Marlborough Road, Springfield Glenesk`,
-            image: o.items[0]?.image || o.items[0]?.productImage || ""
+            message: `All instalments for Order #${o._id.slice(
+              -8
+            )} completed! Ready for pickup at 72 Marlborough Road, Springfield Glenesk`,
+            image: o.items[0]?.image || o.items[0]?.productImage || "",
           });
         }
       }
+
       if (o.status === "delivered") {
-        notifs.push({ message: `Order #${o._id.slice(-8)} has been delivered`, image: o.items[0]?.image || o.items[0]?.productImage || "" });
+        notifs.push({
+          message: `Order #${o._id.slice(-8)} has been delivered`,
+          image: o.items[0]?.image || o.items[0]?.productImage || "",
+        });
       }
     });
+
     setNotifications(notifs.reverse());
   };
 
@@ -176,13 +201,18 @@ const Profile = ({ darkMode }) => {
   const markAsReceived = async (orderId) => {
     try {
       const token = localStorage.getItem("token");
-      await axios.post(`${API_URL}/orders/${orderId}/receive`, {}, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setOrders((prev) =>
-        prev.map((o) => (o._id === orderId ? { ...o, status: "completed" } : o))
+      await axios.post(
+        `${API_URL}/orders/${orderId}/receive`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-      generateNotifications(orders.map(o => o._id === orderId ? { ...o, status: "completed" } : o));
+
+      const updatedOrders = orders.map((o) =>
+        o._id === orderId ? { ...o, status: "completed" } : o
+      );
+
+      setOrders(updatedOrders);
+      generateNotifications(updatedOrders);
     } catch (err) {
       alert("Failed to mark as received");
     }
@@ -209,17 +239,37 @@ const Profile = ({ darkMode }) => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      const updatedOrder = res.data.order || { ...paymentOrder, instalment: { ...paymentOrder.instalment, paid: paymentOrder.instalment.paid + paymentOrder.instalment.monthlyAmount } };
+      const updatedOrder =
+        res.data.order || {
+          ...paymentOrder,
+          instalment: {
+            ...paymentOrder.instalment,
+            paid:
+              paymentOrder.instalment.paid +
+              paymentOrder.instalment.monthlyAmount,
+          },
+        };
 
-      setOrders(prev => prev.map(o => o._id === paymentOrder._id ? updatedOrder : o));
-      generateNotifications(prev => prev.map(o => o._id === paymentOrder._id ? updatedOrder : o));
+      // ✅ FIXED — this was the bug
+      const updatedOrders = orders.map((o) =>
+        o._id === updatedOrder._id ? updatedOrder : o
+      );
+
+      setOrders(updatedOrders);
+      generateNotifications(updatedOrders);
 
       setShowPaymentModal(false);
 
       if (updatedOrder.instalment.paid >= updatedOrder.totalAmount) {
-        alert(`All instalments completed! You can now pick up your order at 72 Marlborough Road, Springfield Glenesk`);
+        alert(
+          `All instalments completed! You can now pick up your order at 72 Marlborough Road, Springfield Glenesk`
+        );
       } else {
-        alert(`Instalment paid! Remaining: R${(updatedOrder.totalAmount - updatedOrder.instalment.paid).toFixed(2)}`);
+        alert(
+          `Instalment paid! Remaining: R${(
+            updatedOrder.totalAmount - updatedOrder.instalment.paid
+          ).toFixed(2)}`
+        );
       }
     } catch (err) {
       alert("Payment failed. Please try again.");
@@ -229,7 +279,14 @@ const Profile = ({ darkMode }) => {
 
   if (loading) {
     return (
-      <div style={{ textAlign: "center", padding: "120px", color: "#fff", fontSize: "24px" }}>
+      <div
+        style={{
+          textAlign: "center",
+          padding: "120px",
+          color: "#fff",
+          fontSize: "24px",
+        }}
+      >
         Loading your profile...
       </div>
     );
@@ -238,7 +295,7 @@ const Profile = ({ darkMode }) => {
   return (
     <div style={{ minHeight: "100vh", padding: "20px" }}>
       <div style={{ maxWidth: "1000px", margin: "0 auto" }}>
-        {/* PROFILE PICTURE & NOTIFICATIONS */}
+        {/* PROFILE TOP SECTION */}
         <div
           style={{
             display: "flex",
@@ -250,7 +307,9 @@ const Profile = ({ darkMode }) => {
             marginBottom: "40px",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+          <div
+            style={{ display: "flex", alignItems: "center", gap: "20px" }}
+          >
             {preview ? (
               <img
                 src={preview}
@@ -282,7 +341,9 @@ const Profile = ({ darkMode }) => {
             )}
 
             <div>
-              <h2 style={{ fontSize: "32px", marginBottom: "10px" }}>My Profile</h2>
+              <h2 style={{ fontSize: "32px", marginBottom: "10px" }}>
+                My Profile
+              </h2>
               <label
                 style={{
                   ...btn,
@@ -302,23 +363,78 @@ const Profile = ({ darkMode }) => {
             </div>
           </div>
 
-          {/* NOTIFICATION ICON */}
+          {/* 🔔 NOTIFICATION ICON */}
           <div style={{ position: "relative" }}>
             <button
-              onClick={() => setShowNotifications(!showNotifications)}
-              style={{ ...btn, borderRadius: "50%", width: "50px", height: "50px", fontSize: "24px", padding: "0" }}
+              onClick={() =>
+                setShowNotifications(!showNotifications)
+              }
+              style={{
+                ...btn,
+                borderRadius: "50%",
+                width: "50px",
+                height: "50px",
+                fontSize: "24px",
+                padding: "0",
+              }}
             >
               🔔
             </button>
+
             {showNotifications && (
-              <div style={{ position: "absolute", right: 0, top: "60px", background: darkMode ? "#222" : "#fff", borderRadius: "12px", width: "320px", maxHeight: "400px", overflowY: "auto", boxShadow: "0 0 10px rgba(0,0,0,0.5)", zIndex: 999 }}>
+              <div
+                style={{
+                  position: "absolute",
+                  right: 0,
+                  top: "60px",
+                  background: darkMode ? "#222" : "#fff",
+                  borderRadius: "12px",
+                  width: "320px",
+                  maxHeight: "400px",
+                  overflowY: "auto",
+                  boxShadow:
+                    "0 0 10px rgba(0,0,0,0.5)",
+                  zIndex: 999,
+                }}
+              >
                 {notifications.length === 0 ? (
-                  <div style={{ padding: "10px", textAlign: "center", color: "#aaa" }}>No notifications</div>
+                  <div
+                    style={{
+                      padding: "10px",
+                      textAlign: "center",
+                      color: "#aaa",
+                    }}
+                  >
+                    No notifications
+                  </div>
                 ) : (
                   notifications.map((n, idx) => (
-                    <div key={idx} style={{ display: "flex", alignItems: "center", padding: "10px", borderBottom: "1px solid #444", gap: "10px" }}>
-                      {n.image && <img src={n.image} alt="Product" style={{ width: "40px", height: "40px", objectFit: "cover", borderRadius: "8px" }} />}
-                      <span style={{ fontSize: "14px" }}>{n.message}</span>
+                    <div
+                      key={idx}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        padding: "10px",
+                        borderBottom:
+                          "1px solid #444",
+                        gap: "10px",
+                      }}
+                    >
+                      {n.image && (
+                        <img
+                          src={n.image}
+                          alt="Product"
+                          style={{
+                            width: "40px",
+                            height: "40px",
+                            objectFit: "cover",
+                            borderRadius: "8px",
+                          }}
+                        />
+                      )}
+                      <span style={{ fontSize: "14px" }}>
+                        {n.message}
+                      </span>
                     </div>
                   ))
                 )}
@@ -327,7 +443,7 @@ const Profile = ({ darkMode }) => {
           </div>
         </div>
 
-        {/* ORDERS */}
+        {/* ORDERS LIST */}
         <div
           style={{
             background: darkMode ? "#111" : "#fff",
@@ -335,12 +451,23 @@ const Profile = ({ darkMode }) => {
             padding: "30px",
           }}
         >
-          <h2 style={{ fontSize: "28px", marginBottom: "20px" }}>
+          <h2
+            style={{
+              fontSize: "28px",
+              marginBottom: "20px",
+            }}
+          >
             Your Orders ({orders.length})
           </h2>
 
           {orders.length === 0 ? (
-            <p style={{ textAlign: "center", color: "#aaa", fontSize: "20px" }}>
+            <p
+              style={{
+                textAlign: "center",
+                color: "#aaa",
+                fontSize: "20px",
+              }}
+            >
               No orders yet.
             </p>
           ) : (
@@ -358,13 +485,22 @@ const Profile = ({ darkMode }) => {
                     marginBottom: "25px",
                   }}
                 >
-                  <strong>Order #{order._id.slice(-8)}</strong> •{" "}
-                  {new Date(order.createdAt).toLocaleDateString()}
+                  <strong>
+                    Order #{order._id.slice(-8)}
+                  </strong>{" "}
+                  •{" "}
+                  {new Date(
+                    order.createdAt
+                  ).toLocaleDateString()}
                   <br />
                   Status:{" "}
                   <span
                     style={{
-                      color: order.status === "completed" ? "lime" : "#ff9800",
+                      color:
+                        order.status ===
+                        "completed"
+                          ? "lime"
+                          : "#ff9800",
                       fontWeight: "bold",
                     }}
                   >
@@ -375,67 +511,141 @@ const Profile = ({ darkMode }) => {
                     style={{
                       margin: "15px 0",
                       padding: "15px",
-                      background: darkMode ? "#222" : "#f0f0f0",
+                      background: darkMode
+                        ? "#222"
+                        : "#f0f0f0",
                       borderRadius: "8px",
                     }}
                   >
-                    <strong>Order Summary:</strong>
-                    {order.items.map((item) => (
-                      <div
-                        key={item.id}
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          margin: "8px 0",
-                          gap: "10px",
-                        }}
-                      >
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                          {item.image || item.productImage ? (
-                            <img src={item.image || item.productImage} alt={item.brand} style={{ width: "60px", height: "60px", objectFit: "cover", borderRadius: "8px" }} />
-                          ) : null}
+                    <strong>
+                      Order Summary:
+                    </strong>
+
+                    {order.items.map(
+                      (item) => (
+                        <div
+                          key={item.id}
+                          style={{
+                            display: "flex",
+                            justifyContent:
+                              "space-between",
+                            alignItems:
+                              "center",
+                            margin:
+                              "8px 0",
+                            gap: "10px",
+                          }}
+                        >
+                          <div
+                            style={{
+                              display:
+                                "flex",
+                              alignItems:
+                                "center",
+                              gap: "10px",
+                            }}
+                          >
+                            {item.image ||
+                            item.productImage ? (
+                              <img
+                                src={
+                                  item.image ||
+                                  item.productImage
+                                }
+                                alt={
+                                  item.brand
+                                }
+                                style={{
+                                  width:
+                                    "60px",
+                                  height:
+                                    "60px",
+                                  objectFit:
+                                    "cover",
+                                  borderRadius:
+                                    "8px",
+                                }}
+                              />
+                            ) : null}
+
+                            <span>
+                              {item.quantity ||
+                                1}{" "}
+                              ×{" "}
+                              {item.brand}{" "}
+                              {item.model ||
+                                item.product_name}
+                            </span>
+                          </div>
                           <span>
-                            {item.quantity || 1} × {item.brand}{" "}
-                            {item.model || item.product_name}
+                            R
+                            {(
+                              item.price *
+                              (item.quantity ||
+                                1)
+                            ).toFixed(2)}
                           </span>
                         </div>
-                        <span>
-                          R{(item.price * (item.quantity || 1)).toFixed(2)}
-                        </span>
-                      </div>
-                    ))}
+                      )
+                    )}
+
                     <div
                       style={{
-                        borderTop: "2px solid #b80000",
+                        borderTop:
+                          "2px solid #b80000",
                         paddingTop: "10px",
                         fontWeight: "bold",
                         fontSize: "18px",
                       }}
                     >
-                      Total: R{total.toFixed(2)}
+                      Total: R
+                      {total.toFixed(2)}
                     </div>
                   </div>
 
-                  {/* INSTALMENT SECTION */}
-                  {instalment && instalment.paid < total && (
-                    <button
-                      onClick={() => openPaymentModal(order)}
-                      style={{
-                        ...btn,
-                        backgroundColor: "#4caf50",
-                        marginTop: "15px",
-                        fontSize: "16px",
-                        padding: "14px 28px",
-                      }}
-                    >
-                      Pay Next Instalment • R{instalment.monthlyAmount.toFixed(2)}
-                    </button>
-                  )}
+                  {/* INSTALMENT */}
+                  {instalment &&
+                    instalment.paid <
+                      total && (
+                      <button
+                        onClick={() =>
+                          openPaymentModal(
+                            order
+                          )
+                        }
+                        style={{
+                          ...btn,
+                          backgroundColor:
+                            "#4caf50",
+                          marginTop: "15px",
+                          fontSize: "16px",
+                          padding:
+                            "14px 28px",
+                        }}
+                      >
+                        Pay Next Instalment
+                        • R
+                        {instalment.monthlyAmount.toFixed(
+                          2
+                        )}
+                      </button>
+                    )}
 
-                  {order.status !== "completed" && (
-                    <button onClick={() => markAsReceived(order._id)} style={btn}>
-                      Mark as {order.delivery === "delivery" ? "Delivered" : "Picked Up"}
+                  {order.status !==
+                    "completed" && (
+                    <button
+                      onClick={() =>
+                        markAsReceived(
+                          order._id
+                        )
+                      }
+                      style={btn}
+                    >
+                      Mark as{" "}
+                      {order.delivery ===
+                      "delivery"
+                        ? "Delivered"
+                        : "Picked Up"}
                     </button>
                   )}
                 </div>
@@ -446,47 +656,129 @@ const Profile = ({ darkMode }) => {
       </div>
 
       {/* PAYMENT MODAL */}
-      {showPaymentModal && paymentOrder && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            background: "rgba(0,0,0,0.7)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 5000,
-          }}
-        >
-          <div style={{ background: "#fff", padding: "30px", borderRadius: "16px", width: "400px", maxWidth: "90%" }}>
-            <h3>Pay Instalment for Order #{paymentOrder._id.slice(-8)}</h3>
-            <p>Amount: R{paymentOrder.instalment.monthlyAmount.toFixed(2)}</p>
+      {showPaymentModal &&
+        paymentOrder && (
+          <div
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+              background:
+                "rgba(0,0,0,0.7)",
+              display: "flex",
+              justifyContent:
+                "center",
+              alignItems: "center",
+              zIndex: 5000,
+            }}
+          >
+            <div
+              style={{
+                background: "#fff",
+                padding: "30px",
+                borderRadius:
+                  "16px",
+                width: "400px",
+                maxWidth: "90%",
+              }}
+            >
+              <h3>
+                Pay Instalment for Order #
+                {paymentOrder._id.slice(
+                  -8
+                )}
+              </h3>
+              <p>
+                Amount: R
+                {paymentOrder.instalment.monthlyAmount.toFixed(
+                  2
+                )}
+              </p>
 
-            <input
-              type="email"
-              placeholder="Your Email"
-              value={emailInput}
-              onChange={(e) => setEmailInput(e.target.value)}
-              style={{ width: "100%", margin: "10px 0", padding: "10px", fontSize: "16px" }}
-            />
-            <input
-              type="text"
-              placeholder="Account Number"
-              value={accountNumber}
-              onChange={(e) => setAccountNumber(e.target.value)}
-              style={{ width: "100%", margin: "10px 0", padding: "10px", fontSize: "16px" }}
-            />
+              <input
+                type="email"
+                placeholder="Your Email"
+                value={emailInput}
+                onChange={(e) =>
+                  setEmailInput(
+                    e.target.value
+                  )
+                }
+                style={{
+                  width: "100%",
+                  margin:
+                    "10px 0",
+                  padding:
+                    "10px",
+                  fontSize:
+                    "16px",
+                }}
+              />
 
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "20px" }}>
-              <button onClick={() => setShowPaymentModal(false)} style={{ ...btn, backgroundColor: "#888" }}>Cancel</button>
-              <button onClick={handlePayment} style={{ ...btn, backgroundColor: "#4caf50" }}>Confirm Payment</button>
+              <input
+                type="text"
+                placeholder="Account Number"
+                value={accountNumber}
+                onChange={(e) =>
+                  setAccountNumber(
+                    e.target.value
+                  )
+                }
+                style={{
+                  width: "100%",
+                  margin:
+                    "10px 0",
+                  padding:
+                    "10px",
+                  fontSize:
+                    "16px",
+                }}
+              />
+
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent:
+                    "flex-end",
+                  gap: "10px",
+                  marginTop:
+                    "20px",
+                }}
+              >
+                <button
+                  onClick={() =>
+                    setShowPaymentModal(
+                      false
+                    )
+                  }
+                  style={{
+                    ...btn,
+                    backgroundColor:
+                      "#888",
+                  }}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  onClick={
+                    handlePayment
+                  }
+                  style={{
+                    ...btn,
+                    backgroundColor:
+                      "#4caf50",
+                  }}
+                >
+                  Confirm
+                  Payment
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
     </div>
   );
 };
